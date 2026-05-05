@@ -1,0 +1,38 @@
+
+> neural-web@0.1.0 build
+> next build
+
+ ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of C:\Users\niteesh\OneDrive\Desktop\coding\codeswayam\package-lock.json as the root directory.
+ To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+ Detected additional lockfiles: 
+   * C:\Users\niteesh\OneDrive\Desktop\coding\codeswayam\neural-web\package-lock.json
+
+   ▲ Next.js 15.5.15
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 23.2s
+   Linting and checking validity of types ...
+ ⨯ ESLint: Cannot find module 'C:\Users\niteesh\OneDrive\Desktop\coding\codeswayam\neural-web\node_modules\eslint-config-next\core-web-vitals' imported from C:\Users\niteesh\OneDrive\Desktop\coding\codeswayam\neural-web\eslint.config.mjs Did you mean to import "eslint-config-next/core-web-vitals.js"?
+Failed to compile.
+
+./app/billing/page.tsx:22:33
+Type error: Property 'loading' does not exist on type 'UseCSWCreditsReturn'.
+
+[0m [90m 20 |[39m
+ [90m 21 |[39m [36mexport[39m [36mdefault[39m [36mfunction[39m [33mBillingPage[39m() {
+[31m[1m>[22m[39m[90m 22 |[39m   [36mconst[39m { wallet[33m,[39m transactions[33m,[39m loading[33m:[39m walletLoading[33m,[39m refetch[33m:[39m refetchWallet } [33m=[39m useCSWCredits()[33m;[39m
+ [90m    |[39m                                 [31m[1m^[22m[39m
+ [90m 23 |[39m   [36mconst[39m { subscriptions[33m,[39m loading[33m:[39m subsLoading } [33m=[39m useCSWSubscriptions()[33m;[39m
+ [90m 24 |[39m   [36mconst[39m [isBuyModalOpen[33m,[39m setIsBuyModalOpen] [33m=[39m useState([36mfalse[39m)[33m;[39m
+ [90m 25 |[39m[0m
+Next.js build worker exited with code: 1 and signal: null
+npm error Lifecycle script `build` failed with error:
+npm error code 1
+npm error path C:\Users\niteesh\OneDrive\Desktop\coding\codeswayam\neural-web
+npm error workspace neural-web@0.1.0
+npm error location C:\Users\niteesh\OneDrive\Desktop\coding\codeswayam\neural-web
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c next build
