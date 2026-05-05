@@ -62,7 +62,7 @@ export default function BillingPage() {
     <div className="space-y-8 max-w-6xl mx-auto">
       <BuyCreditsModal 
         open={isBuyModalOpen} 
-        onOpenChange={setIsBuyModalOpen} 
+        onClose={() => setIsBuyModalOpen(false)} 
         onSuccess={() => refetchWallet()}
       />
 
