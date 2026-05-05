@@ -4,7 +4,7 @@ import { useState } from "react";
 import {
   Key, Plus, RotateCcw, AlertCircle, RefreshCw,
   Shield, Clock, Copy, Check, X, Loader2, Terminal,
-  BookOpen, Zap, Code2, Package,
+  BookOpen, Zap, Code2, Package, Trash2,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -296,6 +296,7 @@ export default function ApiKeysPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [revealKey, setRevealKey] = useState<CreatedApiKey | null>(null);
   const [revokingId, setRevokingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const { data: keys, loading, error, refetch } = useNeuralFetch(() => neuralApi.apiKeys.list());
   const { data: stats, refetch: refetchStats } = useNeuralFetch(() => neuralApi.apiKeys.stats());
@@ -309,6 +310,17 @@ export default function ApiKeysPage() {
       refetch(); refetchStats();
     } catch (err: any) { toast.error(err.message || "Failed to revoke key"); }
     finally { setRevokingId(null); }
+  };
+
+  const handleDelete = async (key: ApiKey) => {
+    if (!confirm(`Delete key "${key.name}"? This action cannot be undone.`)) return;
+    setDeletingId(key.id);
+    try {
+      await neuralApi.apiKeys.delete(key.id);
+      toast.success("API key deleted");
+      refetch(); refetchStats();
+    } catch (err: any) { toast.error(err.message || "Failed to delete key"); }
+    finally { setDeletingId(null); }
   };
 
   const handleCreated = (created: CreatedApiKey) => { setRevealKey(created); refetch(); refetchStats(); };
@@ -403,12 +415,18 @@ export default function ApiKeysPage() {
                           <span className="text-[10px] text-muted-foreground">{k.requestsToday} req today · {k.rateLimit.toLocaleString()}/day limit</span>
                         </div>
                       </div>
-                      {k.status === "active" && (
-                        <Button variant="ghost" size="sm" className="h-8 px-2 text-xs text-muted-foreground hover:text-red-400 hover:bg-red-400/10 shrink-0"
-                          onClick={() => handleRevoke(k)} disabled={revokingId === k.id}>
-                          {revokingId === k.id ? <Loader2 size={11} className="animate-spin" /> : <><RotateCcw size={11} className="mr-1" />Revoke</>}
+                      <div className="flex flex-col gap-2 shrink-0">
+                        {k.status === "active" && (
+                          <Button variant="ghost" size="sm" className="h-8 px-2 text-xs text-muted-foreground hover:text-red-400 hover:bg-red-400/10"
+                            onClick={() => handleRevoke(k)} disabled={revokingId === k.id || deletingId === k.id}>
+                            {revokingId === k.id ? <Loader2 size={11} className="animate-spin" /> : <><RotateCcw size={11} className="mr-1" />Revoke</>}
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="sm" className="h-8 px-2 text-xs text-muted-foreground hover:text-red-500 hover:bg-red-500/10"
+                          onClick={() => handleDelete(k)} disabled={deletingId === k.id || revokingId === k.id}>
+                          {deletingId === k.id ? <Loader2 size={11} className="animate-spin" /> : <><Trash2 size={11} className="mr-1" />Delete</>}
                         </Button>
-                      )}
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

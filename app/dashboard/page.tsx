@@ -105,7 +105,7 @@ export default function DashboardPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2 min-h-[300px]">
+            <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
               {liveEvents.length === 0 && !recentLoading && (recent ?? []).length === 0 && (
                 <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
                   <Activity size={32} className="opacity-20 mb-3" />

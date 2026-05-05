@@ -444,6 +444,9 @@ export const neuralApi = {
 
     revoke: (id: string) =>
       fetcher<ApiKey>(`/api-keys/${id}/revoke`, { method: 'POST' }),
+
+    delete: (id: string) =>
+      fetcher<{ success: boolean }>(`/api-keys/${id}`, { method: 'DELETE' }),
   },
 
   analytics: {

@@ -232,6 +232,19 @@ function TriggerPanel({ node, hasPlatformModel, onUpdate, onRename }: any) {
         </Field>
       </Grid>
     </Section>
+
+    <Section title="Testing">
+      <Grid cols={1}>
+        <Field label={<>TEST PAYLOAD (JSON)</>} hint="Payload sent when you click 'Run Pipeline'">
+          <textarea 
+            className={`${inp} min-h-[120px] font-mono text-xs`} 
+            value={node.config?.testPayload || ""} 
+            onChange={e => onUpdate({ testPayload: e.target.value })} 
+            placeholder={'{\n  "customer_name": "Alice",\n  "question": "What are your business hours?"\n}'} 
+          />
+        </Field>
+      </Grid>
+    </Section>
   </>;
 }
 
@@ -481,24 +494,18 @@ return {
 }
 
 function TransformPanel({ node, onUpdate, onRename }: any) {
-  const fields: any[] = node.config?.fieldMappings || [
-    { name: "to", required: true, source: "$.body.to" },
-    { name: "recipientName", required: false, source: "$.body.recipientName" },
-    { name: "topic", required: true, source: "$.body.topic" },
-    { name: "tone", required: false, source: "$.body.tone" },
-    { name: "context", required: false, source: "$.body.context" }
-  ];
+  const fields: any[] = node.config?.fieldMappings || [];
   const addField = () => onUpdate({ fieldMappings: [...fields, { name: "newField", required: false, source: "$.body.newField" }] });
   const updateField = (i: number, key: string, val: any) => onUpdate({ fieldMappings: fields.map((f, idx) => idx === i ? { ...f, [key]: val } : f) });
   const removeField = (i: number) => onUpdate({ fieldMappings: fields.filter((_, idx) => idx !== i) });
   const toggleReq = (i: number) => onUpdate({ fieldMappings: fields.map((f, idx) => idx === i ? { ...f, required: !f.required } : f) });
 
-  const defaultVals: any[] = node.config?.defaultValuesList || [{ key: "tone", value: "professional" }];
+  const defaultVals: any[] = node.config?.defaultValuesList || [];
   const addDefaultValue = () => onUpdate({ defaultValuesList: [...defaultVals, { key: "", value: "" }] });
   const updateDefaultValue = (i: number, field: string, val: any) => onUpdate({ defaultValuesList: defaultVals.map((d, idx) => idx === i ? { ...d, [field]: val } : d) });
   const removeDefaultValue = (i: number) => onUpdate({ defaultValuesList: defaultVals.filter((_, idx) => idx !== i) });
 
-  const typeVals: any[] = node.config?.typeValidationsList || [{ field: "to", type: "email" }];
+  const typeVals: any[] = node.config?.typeValidationsList || [];
   const addTypeVal = () => onUpdate({ typeValidationsList: [...typeVals, { field: "", type: "string" }] });
   const updateTypeVal = (i: number, key: string, val: any) => onUpdate({ typeValidationsList: typeVals.map((d, idx) => idx === i ? { ...d, [key]: val } : d) });
   const removeTypeVal = (i: number) => onUpdate({ typeValidationsList: typeVals.filter((_, idx) => idx !== i) });
@@ -510,7 +517,7 @@ function TransformPanel({ node, onUpdate, onRename }: any) {
           <input className={inp} value={node.name || ""} onChange={e => onRename(e.target.value)} placeholder="Validate Input" />
         </Field>
         <Field label={<>INPUT SOURCE{auto}</>} hint="Root of incoming request data">
-          <input className={inp} value={node.config?.inputSource || "$.body"} onChange={e => onUpdate({ inputSource: e.target.value })} />
+          <input className={inp} value={node.config?.inputSource || "{{trigger}}"} onChange={e => onUpdate({ inputSource: e.target.value })} />
         </Field>
       </Grid>
     </Section>
@@ -550,7 +557,7 @@ function TransformPanel({ node, onUpdate, onRename }: any) {
     <Section title="Validation rules">
       <Grid cols={1}>
         <Field label="REQUIRED FIELDS" hint="Return 400 if missing">
-          <input className={inp} value={node.config?.requiredFields !== undefined ? node.config.requiredFields : "to, topic"} onChange={e => onUpdate({ requiredFields: e.target.value })} placeholder="e.g. to, topic" />
+          <input className={inp} value={node.config?.requiredFields !== undefined ? node.config.requiredFields : ""} onChange={e => onUpdate({ requiredFields: e.target.value })} placeholder="e.g. email, name" />
         </Field>
         <Field label="DEFAULT VALUES" hint="Applied when absent">
           <div className="space-y-3">
@@ -601,7 +608,7 @@ function TransformPanel({ node, onUpdate, onRename }: any) {
     <Section title="Output schema">
       <textarea className={`${inp} min-h-[140px] resize-none font-mono text-xs leading-relaxed bg-secondary/10`} 
         readOnly
-        value={node.config?.outputSchema || `{\n  "to": string,\n  "recipientName": string | "recipient",\n  "topic": string,\n  "tone": string | "professional",\n  "context": string | ""\n}`} 
+        value={node.config?.outputSchema || "{}"} 
       />
       <div className="flex justify-end mt-2">
         <button className="text-[10px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">

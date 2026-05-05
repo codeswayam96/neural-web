@@ -106,7 +106,7 @@ export default function AnalyticsPage() {
             <CardTitle className="text-sm">Model Usage Today</CardTitle>
             <CardDescription className="text-xs">Share of total requests</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-3 max-h-[400px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
             {muLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <div key={i} className="space-y-1 animate-pulse">
@@ -139,7 +139,7 @@ export default function AnalyticsPage() {
               <Badge variant="secondary" className="text-[10px]">Live</Badge>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="max-h-[400px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
             {rrLoading ? (
               <div className="space-y-2">
                 {Array.from({ length: 5 }).map((_, i) => (

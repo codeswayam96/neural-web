@@ -119,7 +119,16 @@ export default function WorkflowDetailPage() {
     setRunning(true);
     setNodeStatuses({});
     try {
-      await neuralApi.workflows.execute(id as string, { test: true });
+      const triggerNode = localNodes.find(n => n.type === 'trigger');
+      let payload = { test: true };
+      if (triggerNode?.config?.testPayload) {
+        try {
+          payload = JSON.parse(triggerNode.config.testPayload);
+        } catch (e) {
+          toast.error("Test payload is invalid JSON. Using default {test: true}.");
+        }
+      }
+      await neuralApi.workflows.execute(id as string, payload);
       setRunning(false);
       toast.success("Execution finished");
       loadExecutions();
