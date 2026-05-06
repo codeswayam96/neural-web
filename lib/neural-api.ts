@@ -194,6 +194,8 @@ export interface ApiKey {
   permissions: string[];
   rateLimit: number;
   requestsToday: number;
+  allowedIps?: string[];
+  allowedDomains?: string[];
   status: 'active' | 'revoked';
   createdAt: string;
   lastUsed: string;
@@ -204,6 +206,8 @@ export interface CreateApiKeyPayload {
   appName: string;
   permissions?: string[];
   rateLimit?: number;
+  allowedIps?: string[];
+  allowedDomains?: string[];
 }
 
 export interface CreatedApiKey extends ApiKey {

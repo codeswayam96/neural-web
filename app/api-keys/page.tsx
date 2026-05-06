@@ -37,7 +37,7 @@ function CreateKeyDialog({ open, onClose, onSuccess }: {
   open: boolean; onClose: () => void; onSuccess: (k: CreatedApiKey) => void;
 }) {
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState<CreateApiKeyPayload>({ name: "", appName: "", permissions: ["chat"], rateLimit: 1000 });
+  const [form, setForm] = useState<CreateApiKeyPayload>({ name: "", appName: "", permissions: ["chat"], rateLimit: 1000, allowedDomains: [], allowedIps: [] });
 
   if (!open) return null;
 
@@ -90,6 +90,18 @@ function CreateKeyDialog({ open, onClose, onSuccess }: {
             <label className="text-xs text-muted-foreground mb-1.5 block">Rate Limit (requests/day)</label>
             <input type="number" value={form.rateLimit} onChange={(e) => setForm({ ...form, rateLimit: Number(e.target.value) })} min={1} max={100000}
               className="w-full px-3 py-2.5 text-sm bg-secondary border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30" />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground mb-1.5 block">Allowed Domains (Optional)</label>
+            <input value={(form.allowedDomains ?? []).join(", ")} onChange={(e) => setForm({ ...form, allowedDomains: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })} placeholder="example.com, localhost"
+              className="w-full px-3 py-2.5 text-sm bg-secondary border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30" />
+            <p className="text-[10px] text-muted-foreground mt-1">Restricts usage to specific website origins (browsers).</p>
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground mb-1.5 block">Allowed IPs (Optional)</label>
+            <input value={(form.allowedIps ?? []).join(", ")} onChange={(e) => setForm({ ...form, allowedIps: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })} placeholder="192.168.1.1"
+              className="w-full px-3 py-2.5 text-sm bg-secondary border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30" />
+            <p className="text-[10px] text-muted-foreground mt-1">Restricts usage to specific server IPs.</p>
           </div>
           <div>
             <label className="text-xs text-muted-foreground mb-2 block">Permissions</label>
@@ -413,6 +425,12 @@ export default function ApiKeysPage() {
                           <div className="flex items-center gap-1 text-[10px] text-muted-foreground"><Shield size={9} />{k.permissions.join(", ")}</div>
                           <div className="flex items-center gap-1 text-[10px] text-muted-foreground"><Clock size={9} />Last used: {k.lastUsed === "Never" ? "Never" : new Date(k.lastUsed).toLocaleDateString()}</div>
                           <span className="text-[10px] text-muted-foreground">{k.requestsToday} req today · {k.rateLimit.toLocaleString()}/day limit</span>
+                          {k.allowedDomains && k.allowedDomains.length > 0 && (
+                            <span className="text-[10px] text-emerald-400 border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 rounded">Domains: {k.allowedDomains.join(", ")}</span>
+                          )}
+                          {k.allowedIps && k.allowedIps.length > 0 && (
+                            <span className="text-[10px] text-emerald-400 border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 rounded">IPs: {k.allowedIps.join(", ")}</span>
+                          )}
                         </div>
                       </div>
                       <div className="flex flex-col gap-2 shrink-0">

@@ -58,9 +58,10 @@ const NODE_TYPES = [
 interface Props {
   onSelect: (type: string, label: string) => void;
   onClose: () => void;
+  disabledTypes?: string[];
 }
 
-export function NodePickerModal({ onSelect, onClose }: Props) {
+export function NodePickerModal({ onSelect, onClose, disabledTypes = [] }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <motion.div
@@ -86,19 +87,22 @@ export function NodePickerModal({ onSelect, onClose }: Props) {
 
         {/* Node type cards */}
         <div className="p-4 space-y-2 max-h-[70vh] overflow-y-auto">
-          {NODE_TYPES.map((n, i) => (
-            <motion.button
-              key={n.type}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.05 }}
-              onClick={() => { onSelect(n.type, n.label); onClose(); }}
-              className={`w-full flex items-start gap-4 p-4 rounded-xl border transition-all text-left group ${n.color.bg} ${n.color.border} ${n.color.hover}`}
-            >
-              {/* Icon */}
-              <div className="w-12 h-12 rounded-xl bg-background/60 border border-white/10 flex items-center justify-center shrink-0 text-xl">
-                {n.emoji}
-              </div>
+          {NODE_TYPES.map((n, i) => {
+            const isDisabled = disabledTypes.includes(n.type);
+            return (
+              <motion.button
+                key={n.type}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.05 }}
+                disabled={isDisabled}
+                onClick={() => { onSelect(n.type, n.label); onClose(); }}
+                className={`w-full flex items-start gap-4 p-4 rounded-xl border transition-all text-left group ${isDisabled ? 'opacity-50 grayscale cursor-not-allowed border-border bg-secondary/10' : `${n.color.bg} ${n.color.border} ${n.color.hover}`}`}
+              >
+                {/* Icon */}
+                <div className="w-12 h-12 rounded-xl bg-background/60 border border-white/10 flex items-center justify-center shrink-0 text-xl">
+                  {n.emoji}
+                </div>
 
               {/* Text */}
               <div className="flex-1 min-w-0">
@@ -117,9 +121,10 @@ export function NodePickerModal({ onSelect, onClose }: Props) {
               </div>
 
               {/* Arrow */}
-              <ArrowRight size={16} className={`shrink-0 mt-1 opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1 ${n.color.text}`} />
+              <ArrowRight size={16} className={`shrink-0 mt-1 opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1 ${isDisabled ? 'text-muted-foreground' : n.color.text}`} />
             </motion.button>
-          ))}
+          );
+          })}
         </div>
       </motion.div>
     </div>

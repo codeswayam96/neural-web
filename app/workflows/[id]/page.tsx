@@ -100,6 +100,16 @@ export default function WorkflowDetailPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
+      if (!localNodes.some(n => n.type === 'trigger')) {
+        toast.error("Workflow must have exactly one Trigger component.");
+        setSaving(false);
+        return;
+      }
+      if (localNodes.filter(n => n.type === 'trigger').length > 1) {
+        toast.error("Workflow can only have one Trigger component.");
+        setSaving(false);
+        return;
+      }
       await neuralApi.workflows.updateStructure(id as string, localNodes.map(n => ({ id: n.id, type: n.type, name: n.name, config: n.config, positionX: n.positionX || 0, positionY: n.positionY || 0 })), []);
       if (workflow) {
         await neuralApi.workflows.update(id as string, {
@@ -162,6 +172,7 @@ export default function WorkflowDetailPage() {
     <div className="h-[calc(100vh-6rem)] flex flex-col -m-6 overflow-hidden bg-background">
       {showNodePicker && (
         <NodePickerModal
+          disabledTypes={localNodes.some(n => n.type === 'trigger') ? ['trigger'] : []}
           onSelect={(type, label) => { addNode(type, label, insertAfterIndex); setInsertAfterIndex(undefined); }}
           onClose={() => { setShowNodePicker(false); setInsertAfterIndex(undefined); }}
         />
@@ -227,18 +238,23 @@ export default function WorkflowDetailPage() {
                     { type: "transform", name: "JSON MAPPER", desc: "Structure your data", icon: <RefreshCw size={18} className="text-emerald-500" />, color: "bg-emerald-500/10 border-emerald-500/20" },
                     { type: "logic", name: "LOGIC HOOK", desc: "Conditional routing", icon: <Code size={18} className="text-purple-500" />, color: "bg-purple-500/10 border-purple-500/20" },
                     { type: "http", name: "HTTP REQUEST", desc: "External API Call", icon: <Share2 size={18} className="text-pink-500" />, color: "bg-pink-500/10 border-pink-500/20" },
-                  ].map(n => (
-                    <button key={n.name} onClick={() => { setInsertAfterIndex(undefined); addNode(n.type, n.name); }}
-                      className="w-full flex items-center gap-4 p-3 rounded-2xl border border-border bg-card hover:bg-secondary/50 hover:border-border/80 transition-all text-left group">
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border ${n.color}`}>
-                        {n.icon}
-                      </div>
-                      <div>
-                        <p className="font-bold text-sm group-hover:text-primary transition-colors">{n.name}</p>
-                        <p className="text-[11px] text-muted-foreground mt-0.5">{n.desc}</p>
-                      </div>
-                    </button>
-                  ))}
+                  ].map(n => {
+                    const isDisabled = n.type === 'trigger' && localNodes.some(node => node.type === 'trigger');
+                    return (
+                      <button key={n.name} 
+                        disabled={isDisabled}
+                        onClick={() => { setInsertAfterIndex(undefined); addNode(n.type, n.name); }}
+                        className={`w-full flex items-center gap-4 p-3 rounded-2xl border border-border bg-card transition-all text-left group ${isDisabled ? 'opacity-50 grayscale cursor-not-allowed' : 'hover:bg-secondary/50 hover:border-border/80'}`}>
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border ${n.color}`}>
+                          {n.icon}
+                        </div>
+                        <div>
+                          <p className={`font-bold text-sm transition-colors ${isDisabled ? '' : 'group-hover:text-primary'}`}>{n.name}</p>
+                          <p className="text-[11px] text-muted-foreground mt-0.5">{n.desc}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -379,15 +395,15 @@ export default function WorkflowDetailPage() {
                   node={selectedNode}
                   agents={agents}
                   hasPlatformModel={hasPlatformModel}
-                  onUpdate={updates => updateNodeConfig(selectedNode.id, updates)}
-                  onRename={name => updateNodeName(selectedNode.id, name)}
-                  onDelete={() => removeNode(selectedNode.id)}
+                  onUpdate={updates => selectedNode && updateNodeConfig(selectedNode.id, updates)}
+                  onRename={name => selectedNode && updateNodeName(selectedNode.id, name)}
+                  onDelete={() => selectedNode && removeNode(selectedNode.id)}
                   onSave={handleSave}
-                  canDelete={localNodes.length > 1}
+                  canDelete={localNodes.length > 1 && selectedNode && (selectedNode.type !== 'trigger' || localNodes.filter(n => n.type === 'trigger').length > 1)}
                   workflow={workflow}
                   onWorkflowUpdate={updates => setWorkflow({ ...workflow, ...updates })}
                 />
-                {selectedNode && localNodes.length > 1 && (
+                {selectedNode && (localNodes.length > 1 && (selectedNode.type !== 'trigger' || localNodes.filter(n => n.type === 'trigger').length > 1)) && (
                   <div className="mt-8 pt-6 border-t border-border/50">
                     <button onClick={() => removeNode(selectedNode.id)} className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border border-red-500/20 bg-red-500/5 text-red-500 text-xs font-bold hover:bg-red-500/10 transition-colors">
                       <Trash2 size={14} /> Terminate Component
