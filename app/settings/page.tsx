@@ -1,52 +1,42 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { 
-  Settings, Shield, Globe, HardDrive, 
-  User, Mail, Fingerprint, Lock, 
-  Trash2, RefreshCw, Smartphone, 
-  BellRing, Laptop, Zap
+  Shield, 
+  User, Lock, 
+  Trash2,
+  BellRing, Laptop, Zap, ExternalLink
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCSWUser } from "@codeswayam/auth";
 import { toast } from "sonner";
-import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { getAuthUrl } from "@/lib/auth";
 
 export default function SettingsPage() {
-  const { user, isLoaded } = useCSWUser();
-  const [saving, setSaving] = useState(false);
+  const { user } = useCSWUser();
 
-  const handleSave = () => {
-    setSaving(true);
-    setTimeout(() => {
-      setSaving(false);
-      toast.success("Settings saved successfully");
-    }, 1000);
+  const openSSOSettings = (path = "") => {
+    window.open(`${getAuthUrl()}${path}`, "_blank");
   };
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto">
+    <div className="space-y-8 max-w-5xl">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Platform Settings</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Manage your personal profile, security preferences, and global AI defaults.
+            Manage your NeuralHub AI defaults. Account and security settings are managed via your SSO profile.
           </p>
         </div>
-        <Button variant="neural" onClick={handleSave} disabled={saving}>
-          {saving ? <RefreshCw size={14} className="animate-spin mr-2" /> : <Shield size={14} className="mr-2" />}
-          Save Changes
-        </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column - Navigation/Summary */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+        {/* Left Column */}
         <div className="space-y-6">
+          {/* Profile Card */}
           <Card className="border-border/50 bg-card/30 backdrop-blur-sm">
             <CardContent className="p-6">
               <div className="flex flex-col items-center text-center">
@@ -56,76 +46,76 @@ export default function SettingsPage() {
                     ✨
                   </div>
                 </div>
-                <h2 className="font-bold">{user?.name || "Neural Explorer"}</h2>
-                <p className="text-xs text-muted-foreground mt-1">{user?.email || "syncing..."}</p>
+                <h2 className="font-bold">{user?.name || "—"}</h2>
+                <p className="text-xs text-muted-foreground mt-1">{user?.email || "—"}</p>
                 <div className="mt-4 flex flex-wrap justify-center gap-2">
                   <Badge variant="secondary" className="text-[10px] uppercase">{(user as any)?.role || "Member"}</Badge>
                   <Badge variant="outline" className="text-[10px] uppercase border-emerald-500/30 text-emerald-500 bg-emerald-500/5">Verified</Badge>
                 </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-4 w-full text-xs gap-1.5"
+                  onClick={() => openSSOSettings()}
+                >
+                  <ExternalLink size={11} />
+                  Manage Account
+                </Button>
               </div>
             </CardContent>
           </Card>
 
+          {/* Settings nav */}
           <nav className="space-y-1">
             {[
-              { label: "Profile Information", icon: User, active: true },
-              { label: "Security & Access", icon: Lock },
-              { label: "AI Safety Engine", icon: Shield },
-              { label: "Notifications", icon: BellRing },
-              { label: "Devices & Sessions", icon: Laptop },
+              { label: "AI Defaults", icon: Zap, active: true, local: true },
+              { label: "Security & Access", icon: Lock, local: false, url: "/account/profile" },
+              { label: "Notifications", icon: BellRing, local: false, url: "/account/preferences" },
+              { label: "Devices & Sessions", icon: Laptop, local: false, url: "/account/security" },
             ].map((item) => (
               <button
                 key={item.label}
+                onClick={() => { if (!item.local) openSSOSettings(item.url); }}
                 className={cn(
-                  "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all",
-                  item.active 
-                    ? "bg-primary/10 text-primary font-medium border border-primary/20" 
+                  "w-full flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl text-sm transition-all",
+                  item.active
+                    ? "bg-primary/10 text-primary font-medium border border-primary/20"
                     : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
                 )}
               >
-                <item.icon size={16} />
-                {item.label}
+                <span className="flex items-center gap-3">
+                  <item.icon size={16} />
+                  {item.label}
+                </span>
+                {!item.local && <ExternalLink size={11} className="opacity-50" />}
               </button>
             ))}
           </nav>
         </div>
 
-        {/* Right Column - Form Areas */}
+        {/* Right Column */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Profile Section */}
-          <Card className="border-border/50">
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <User size={18} className="text-primary" />
-                Identity & Access
-              </CardTitle>
-              <CardDescription className="text-xs">
-                Your public identity across the Codeswayam AI ecosystem.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="fullName" className="text-xs">Full Name</Label>
-                  <Input id="fullName" defaultValue={user?.name} className="bg-secondary/30 h-9 text-sm" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-xs">Email Address</Label>
-                  <Input id="email" defaultValue={user?.email} disabled className="bg-muted/50 h-9 text-sm italic" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="bio" className="text-xs">Developer Bio</Label>
-                <textarea 
-                  id="bio" 
-                  placeholder="Tell us about the AI apps you are building..."
-                  className="w-full bg-secondary/30 border border-border p-3 rounded-xl text-sm min-h-[100px] outline-none focus:ring-1 focus:ring-primary/50 transition-all"
-                />
-              </div>
-            </CardContent>
-          </Card>
+          {/* SSO Account Banner */}
+          <div className="flex items-start gap-3 p-4 rounded-xl border border-primary/20 bg-primary/5">
+            <Shield size={16} className="text-primary mt-0.5 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium">Account managed by Codeswayam SSO</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Your profile, password, 2FA, and active sessions are managed centrally via the Codeswayam identity platform.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="shrink-0 text-xs gap-1.5"
+              onClick={() => openSSOSettings()}
+            >
+              <ExternalLink size={11} />
+              Open SSO Settings
+            </Button>
+          </div>
 
-          {/* AI Configuration Section */}
+          {/* AI Defaults */}
           <Card className="border-border/50">
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
@@ -159,16 +149,23 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <div className="grid gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-[10px] font-bold uppercase text-muted-foreground">Max Context Tokens</Label>
-                  <select className="w-full h-9 bg-secondary/30 border border-border px-3 rounded-lg text-sm outline-none">
-                    <option>Standard (4,096 tokens)</option>
-                    <option>Extended (32,768 tokens)</option>
-                    <option>Full (128,000 tokens)</option>
-                  </select>
-                </div>
+              <div className="space-y-1.5">
+                <Label className="text-[10px] font-bold uppercase text-muted-foreground">Max Context Tokens</Label>
+                <select className="w-full h-9 bg-secondary/30 border border-border px-3 rounded-lg text-sm outline-none">
+                  <option>Standard (4,096 tokens)</option>
+                  <option>Extended (32,768 tokens)</option>
+                  <option>Full (128,000 tokens)</option>
+                </select>
               </div>
+
+              <Button
+                variant="neural"
+                size="sm"
+                onClick={() => toast.success("AI defaults saved")}
+              >
+                <Shield size={13} className="mr-1.5" />
+                Save AI Defaults
+              </Button>
             </CardContent>
           </Card>
 
@@ -194,5 +191,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-
-

@@ -10,10 +10,9 @@ import {
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { fetchProfile, logout } from "@/lib/api";
+import { logout } from "@codeswayam/auth";
 import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
-import { useCSWCredits } from "@codeswayam/auth";
+import { useCSWUser, useCSWCredits, AuthGuard } from "@codeswayam/auth";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Overview", href: "/dashboard" },
@@ -28,7 +27,7 @@ const navItems = [
   { icon: Settings, label: "Settings", href: "/settings" },
 ];
 
-export default function DashboardLayout({ 
+function DashboardShell({ 
   children,
   showSidebar = true,
   showTopBar = true,
@@ -38,21 +37,8 @@ export default function DashboardLayout({
   showTopBar?: boolean;
 }) {
   const pathname = usePathname();
-  const [user, setUser] = useState<any>(null);
-  const [isSignedIn, setIsSignedIn] = useState(false);
+  const { user, isSignedIn } = useCSWUser();
   const { wallet } = useCSWCredits();
-
-  useEffect(() => {
-    fetchProfile().then(res => {
-      const data = res?.data || res;
-      if (data && data.email) {
-        setUser(data);
-        setIsSignedIn(true);
-      }
-    }).catch(() => {
-      setIsSignedIn(false);
-    });
-  }, []);
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -93,20 +79,20 @@ export default function DashboardLayout({
             })}
           </nav>
 
-          {/* Footer */}
+          {/* Sidebar user footer */}
           <div className="border-t border-border p-3">
             <div className="flex items-center gap-2.5 px-2 py-1.5 mb-2">
               <div className="w-7 h-7 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center">
                 <User size={13} className="text-primary" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium truncate">{isSignedIn ? user?.name : 'Guest'}</p>
+                <p className="text-xs font-medium truncate">{user?.name || "—"}</p>
                 <div className="flex items-center gap-2">
-                  <p className="text-[10px] text-muted-foreground truncate">{isSignedIn ? user?.email : 'No session'}</p>
-                  {isSignedIn && (
+                  <p className="text-[10px] text-muted-foreground truncate">{user?.email || "—"}</p>
+                  {wallet?.balance !== undefined && (
                     <div className="flex items-center gap-1 text-[9px] font-bold text-yellow-400 bg-yellow-400/10 px-1 rounded">
                       <Zap size={8} fill="currentColor" />
-                      {wallet?.balance?.toLocaleString() || "0"}
+                      {wallet.balance.toLocaleString()}
                     </div>
                   )}
                 </div>
@@ -129,14 +115,13 @@ export default function DashboardLayout({
         </aside>
       )}
 
-      {/* Main */}
+      {/* Main content area */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top bar */}
         {showTopBar && (
           <header className="h-14 shrink-0 border-b border-border glass-strong flex items-center justify-between px-6">
             <div>
               <h1 className="text-sm font-semibold text-foreground capitalize">
-                {pathname.split("/").pop()?.replace("-", " ") || "Dashboard"}
+                {pathname.split("/").pop()?.replace(/-/g, " ") || "Dashboard"}
               </h1>
               <p className="text-[10px] text-muted-foreground">neural.codeswayam.com</p>
             </div>
@@ -155,10 +140,40 @@ export default function DashboardLayout({
             </div>
           </header>
         )}
-
-        {/* Page content */}
         <main className="flex-1 overflow-y-auto p-6 bg-grid-sm">{children}</main>
       </div>
     </div>
+  );
+}
+
+/**
+ * DashboardLayout — wraps all authenticated dashboard pages.
+ * Uses AuthGuard from @codeswayam/auth to enforce SSO session.
+ * Unauthenticated users are automatically redirected to the SSO login.
+ */
+export default function DashboardLayout({ 
+  children,
+  showSidebar = true,
+  showTopBar = true,
+}: { 
+  children: React.ReactNode;
+  showSidebar?: boolean;
+  showTopBar?: boolean;
+}) {
+  return (
+    <AuthGuard
+      fallback={
+        <div className="flex h-screen items-center justify-center bg-background">
+          <div className="flex flex-col items-center gap-3 text-muted-foreground">
+            <Brain size={32} className="text-primary animate-pulse" />
+            <p className="text-sm font-medium">Authenticating via SSO…</p>
+          </div>
+        </div>
+      }
+    >
+      <DashboardShell showSidebar={showSidebar} showTopBar={showTopBar}>
+        {children}
+      </DashboardShell>
+    </AuthGuard>
   );
 }

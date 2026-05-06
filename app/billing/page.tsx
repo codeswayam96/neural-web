@@ -59,7 +59,7 @@ export default function BillingPage() {
   ];
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto">
+    <div className="space-y-8 max-w-6xl">
       <BuyCreditsModal 
         open={isBuyModalOpen} 
         onClose={() => setIsBuyModalOpen(false)} 
@@ -116,7 +116,7 @@ export default function BillingPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* Transaction History */}
         <Card className="lg:col-span-2 border-border/50 bg-card/50 backdrop-blur-sm">
           <CardHeader className="flex flex-row items-center justify-between border-b border-border/50 pb-4">
@@ -133,7 +133,7 @@ export default function BillingPage() {
               View All
             </Button>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent className="p-0 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
             <div className="divide-y divide-border/50">
               {walletLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
