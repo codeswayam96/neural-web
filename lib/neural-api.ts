@@ -3,47 +3,27 @@
  * Connects neural-web frontend to the neural-api NestJS backend.
  */
 
-const BASE = process.env.NEXT_PUBLIC_NEURAL_API_URL || 'http://localhost:3006';
+const DIRECT_BASE = process.env.NEXT_PUBLIC_NEURAL_API_URL || 'http://localhost:3006';
+// On the client, route through the Next.js proxy so the server can attach the HttpOnly cookie.
+const BASE = typeof window === 'undefined' ? DIRECT_BASE : '/api/neural';
 
 async function fetcher<T>(path: string, options?: RequestInit): Promise<T> {
   const headers = new Headers(options?.headers);
-  
-  // Only set default Content-Type if not provided and not FormData
+
   if (!headers.has('Content-Type') && !(options?.body instanceof FormData)) {
     headers.set('Content-Type', 'application/json');
   }
 
-  let token: string | undefined;
-
-  // Forward cookies/token for SSR in Next.js 15
+  // SSR: read the HttpOnly cookie server-side and forward as Bearer token
   if (typeof window === 'undefined') {
     try {
-      const { cookies, headers: nextHeaders } = await import('next/headers');
-      const headerList = await nextHeaders();
-      const rawCookie = headerList.get('cookie');
-      
-      if (rawCookie) {
-        headers.set('Cookie', rawCookie);
-        // Extract Authentication token if present for explicit header
-        const match = rawCookie.match(/Authentication=([^;]+)/);
-        if (match) token = match[1];
-      } else {
-        const cookieStore = await cookies();
-        token = cookieStore.get('Authentication')?.value;
-        const cookieStr = cookieStore.toString();
-        if (cookieStr) headers.set('Cookie', cookieStr);
-      }
+      const { cookies } = await import('next/headers');
+      const cookieStore = await cookies();
+      const token = cookieStore.get('Authentication')?.value;
+      if (token) headers.set('Authorization', `Bearer ${token}`);
     } catch {
-      // Not in a request context (e.g. build time), skip
+      // build time — skip
     }
-  } else {
-    // Client-side: Extract from document.cookie
-    const match = document.cookie.match(/Authentication=([^;]+)/);
-    if (match) token = match[1];
-  }
-
-  if (token && !headers.has('Authorization')) {
-    headers.set('Authorization', `Bearer ${token}`);
   }
 
   const { headers: _, ...restOptions } = options || {};
@@ -52,7 +32,8 @@ async function fetcher<T>(path: string, options?: RequestInit): Promise<T> {
     cache: 'no-store',
     ...restOptions,
     headers,
-    credentials: 'include',
+    // credentials only needed for direct calls (SSR); proxy handles auth via Bearer
+    credentials: typeof window === 'undefined' ? 'include' : 'same-origin',
   });
 
   if (!res.ok) {
