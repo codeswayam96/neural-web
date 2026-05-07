@@ -9,8 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@codeswayam/api-client": "^1.2.1",
-    "@codeswayam/auth": "^2.1.0",
+    "@codeswayam/api-client": "^1.2.3",
+    "@codeswayam/auth": "^2.2.4",
     "@radix-ui/react-avatar": "^1.1.10",
     "@radix-ui/react-label": "^2.1.7",
     "date-fns": "^4.1.0",

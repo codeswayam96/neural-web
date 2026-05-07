@@ -2,37 +2,53 @@
 > neural-web@0.1.0 build
 > next build
 
- ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
- We detected multiple lockfiles and selected the directory of C:\Users\niteesh\OneDrive\Desktop\coding\codeswayam\package-lock.json as the root directory.
- To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
-   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
- Detected additional lockfiles: 
-   * C:\Users\niteesh\OneDrive\Desktop\coding\codeswayam\neural-web\package-lock.json
-
    ▲ Next.js 15.5.15
-   - Environments: .env.local
+   - Environments: .env.local, .env
 
    Creating an optimized production build ...
- ✓ Compiled successfully in 23.2s
+ ✓ Compiled successfully in 45s
    Linting and checking validity of types ...
- ⨯ ESLint: Cannot find module 'C:\Users\niteesh\OneDrive\Desktop\coding\codeswayam\neural-web\node_modules\eslint-config-next\core-web-vitals' imported from C:\Users\niteesh\OneDrive\Desktop\coding\codeswayam\neural-web\eslint.config.mjs Did you mean to import "eslint-config-next/core-web-vitals.js"?
-Failed to compile.
 
-./app/billing/page.tsx:22:33
-Type error: Property 'loading' does not exist on type 'UseCSWCreditsReturn'.
+./app/layout.tsx
+52:9  Warning: Custom fonts not added in `pages/_document.js` will only load for a single page. This is discouraged. See: https://nextjs.org/docs/messages/no-page-custom-font  @next/next/no-page-custom-font
 
-[0m [90m 20 |[39m
- [90m 21 |[39m [36mexport[39m [36mdefault[39m [36mfunction[39m [33mBillingPage[39m() {
-[31m[1m>[22m[39m[90m 22 |[39m   [36mconst[39m { wallet[33m,[39m transactions[33m,[39m loading[33m:[39m walletLoading[33m,[39m refetch[33m:[39m refetchWallet } [33m=[39m useCSWCredits()[33m;[39m
- [90m    |[39m                                 [31m[1m^[22m[39m
- [90m 23 |[39m   [36mconst[39m { subscriptions[33m,[39m loading[33m:[39m subsLoading } [33m=[39m useCSWSubscriptions()[33m;[39m
- [90m 24 |[39m   [36mconst[39m [isBuyModalOpen[33m,[39m setIsBuyModalOpen] [33m=[39m useState([36mfalse[39m)[33m;[39m
- [90m 25 |[39m[0m
-Next.js build worker exited with code: 1 and signal: null
-npm error Lifecycle script `build` failed with error:
-npm error code 1
-npm error path C:\Users\niteesh\OneDrive\Desktop\coding\codeswayam\neural-web
-npm error workspace neural-web@0.1.0
-npm error location C:\Users\niteesh\OneDrive\Desktop\coding\codeswayam\neural-web
-npm error command failed
-npm error command C:\WINDOWS\system32\cmd.exe /d /s /c next build
+./lib/hooks.ts
+45:5  Warning: Unused eslint-disable directive (no problems were reported from 'react-hooks/exhaustive-deps').
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
+   Collecting page data ...
+   Generating static pages (0/15) ...
+   Generating static pages (3/15) 
+   Generating static pages (7/15) 
+   Generating static pages (11/15) 
+ ✓ Generating static pages (15/15)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                 Size  First Load JS
+┌ ○ /                                    10.8 kB         126 kB
+├ ○ /_not-found                             1 kB         103 kB
+├ ○ /agents                              8.87 kB         146 kB
+├ ƒ /agents/[id]/playground              49.4 kB         165 kB
+├ ○ /analytics                           5.64 kB         130 kB
+├ ○ /api-keys                            9.32 kB         143 kB
+├ ○ /billing                             10.4 kB         169 kB
+├ ○ /dashboard                           8.26 kB         172 kB
+├ ○ /image-generation                    8.73 kB         143 kB
+├ ○ /knowledge-base                      4.62 kB         145 kB
+├ ƒ /knowledge-base/[id]                 3.11 kB         131 kB
+├ ○ /models                              30.2 kB         179 kB
+├ ○ /settings                             4.9 kB         137 kB
+├ ○ /workflows                           9.21 kB         149 kB
+└ ƒ /workflows/[id]                      19.5 kB         193 kB
++ First Load JS shared by all             102 kB
+  ├ chunks/1255-7acccb5f6afc5e0f.js      45.9 kB
+  ├ chunks/4bd1b696-f785427dddbba9fb.js  54.2 kB
+  └ other shared chunks (total)          2.01 kB
+
+
+ƒ Middleware                             34.6 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
