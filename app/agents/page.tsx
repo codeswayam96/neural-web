@@ -12,6 +12,7 @@ import { neuralApi, Agent, CreateAgentPayload, KnowledgeBase } from "@/lib/neura
 import { useNeuralFetch } from "@/lib/hooks";
 import Link from "next/link";
 import { toast } from "sonner";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 const MODEL_COLORS: Record<string, string> = {
   gemini: "bg-blue-500/10 text-blue-400 border-blue-500/20",
@@ -122,7 +123,7 @@ function AgentFormDialog({ open, onClose, onSuccess, editAgent }: {
           {/* Identity */}
           <div className="space-y-1">
             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5"><Zap size={10} className="text-primary" /> Identity</p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="text-xs text-muted-foreground mb-1.5 block">Agent Name *</label>
                 <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="auraflow-support-bot" required
@@ -244,12 +245,19 @@ export default function AgentsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editAgent, setEditAgent] = useState<Agent | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const { confirm, ConfirmDialogNode } = useConfirm();
 
   const { data: agents, loading, error, refetch } = useNeuralFetch(() => neuralApi.agents.list(search, 'chat'), [search]);
   const { data: stats, refetch: refetchStats } = useNeuralFetch(() => neuralApi.agents.stats());
 
   const handleDelete = async (agent: Agent) => {
-    if (!confirm(`Delete agent "${agent.name}"? This cannot be undone.`)) return;
+    const ok = await confirm({
+      title: "Delete Agent",
+      description: `Delete "${agent.name}"? This cannot be undone.`,
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
     setDeletingId(agent.id);
     try {
       await neuralApi.agents.delete(agent.id);
@@ -266,25 +274,26 @@ export default function AgentsPage() {
       <AgentFormDialog open={dialogOpen || editAgent !== null}
         onClose={() => { setDialogOpen(false); setEditAgent(null); }}
         onSuccess={handleSuccess} editAgent={editAgent} />
+      {ConfirmDialogNode}
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">AI Agents</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Deploy and manage autonomous AI agents for your SaaS applications.</p>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">AI Agents</h1>
+          <p className="text-sm text-muted-foreground mt-0.5 hidden sm:block">Deploy and manage autonomous AI agents for your SaaS applications.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 shrink-0">
           <Button variant="outline" size="sm" onClick={refetch} className="h-9">
             <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
           </Button>
-          <Button variant="neural" size="sm" onClick={() => setDialogOpen(true)} className="h-9 px-4">
-            <Plus size={13} className="mr-1.5" /> Deploy Agent
+          <Button variant="neural" size="sm" onClick={() => setDialogOpen(true)} className="h-9 px-3 sm:px-4">
+            <Plus size={13} className="sm:mr-1.5" /><span className="hidden sm:inline">Deploy Agent</span>
           </Button>
         </div>
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <StatCard label="Total Agents" value={stats?.total ?? "—"} icon={<Bot size={18} className="text-primary" />} color="bg-primary/10" />
         <StatCard label="Active" value={stats?.active ?? "—"} icon={<Zap size={18} className="text-emerald-400" />} color="bg-emerald-500/10" />
         <StatCard label="Inactive" value={stats?.inactive ?? "—"} icon={<Users size={18} className="text-amber-400" />} color="bg-amber-500/10" />
@@ -322,9 +331,9 @@ export default function AgentsPage() {
 
       {/* Agents Grid */}
       {!loading && !error && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {(agents ?? []).length === 0 ? (
-            <div className="col-span-3 flex flex-col items-center justify-center py-24 gap-5 border border-dashed border-border rounded-2xl text-muted-foreground">
+            <div className="col-span-full flex flex-col items-center justify-center py-20 gap-5 border border-dashed border-border rounded-2xl text-muted-foreground">
               <div className="w-20 h-20 rounded-3xl bg-primary/5 border border-primary/10 flex items-center justify-center">
                 <Bot size={36} className="text-primary/40" />
               </div>

@@ -43,28 +43,28 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6 max-w-7xl">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold">Platform Overview</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <p className="text-sm text-muted-foreground mt-0.5 hidden sm:block">
             Live data from NeuralAPI · All systems operational
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 shrink-0">
           <Button variant="outline" size="sm" onClick={refetchOv}>
-            <RefreshCw size={13} className={loading ? "animate-spin" : ""} /> Refresh
+            <RefreshCw size={13} className={loading ? "animate-spin" : ""} /> <span className="hidden sm:inline ml-1">Refresh</span>
           </Button>
-          <Button variant="outline" size="sm" asChild>
+          <Button variant="outline" size="sm" asChild className="hidden sm:flex">
             <Link href="/agents"><Bot size={13} /> New Agent</Link>
           </Button>
           <Button variant="neural" size="sm" asChild>
-            <Link href="/api-keys"><Key size={13} /> Issue API Key</Link>
+            <Link href="/api-keys"><Key size={13} /><span className="hidden sm:inline ml-1">Issue API Key</span></Link>
           </Button>
         </div>
       </div>
 
       {/* KPI grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
         {ovLoading
           ? Array.from({ length: 6 }).map((_, i) => (
               <Card key={i} className="p-4 animate-pulse">
@@ -90,7 +90,7 @@ export default function DashboardPage() {
             ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         {/* Live Stream */}
         <Card className="lg:col-span-2">
           <CardHeader className="pb-3">
@@ -192,7 +192,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { icon: Bot, label: "Create Agent", desc: "Build a new AI agent", href: "/agents", color: "text-blue-400" },
           { icon: Cpu, label: "Add Model Key", desc: "Register LLM API keys", href: "/models", color: "text-purple-400" },

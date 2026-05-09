@@ -12,6 +12,7 @@ import { neuralApi, KnowledgeBase } from "@/lib/neural-api";
 import { useNeuralFetch } from "@/lib/hooks";
 import Link from "next/link";
 import { toast } from "sonner";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 // ── Create KB Dialog ──────────────────────────────────────────────────
 function CreateKBDialog({
@@ -267,12 +268,19 @@ function EditKBDialog({
 export default function KnowledgeBasePage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editKb, setEditKb] = useState<KnowledgeBase | null>(null);
+  const { confirm, ConfirmDialogNode } = useConfirm();
   const { data: kbs, loading, error, refetch } = useNeuralFetch(() => neuralApi.kb.list());
 
   const handleDeleteKB = async (id: string, name: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!confirm(`Are you sure you want to delete "${name}"? All indexed documents will be lost.`)) return;
+    const ok = await confirm({
+      title: "Delete Knowledge Base",
+      description: `Delete "${name}"? All indexed documents will be permanently lost.`,
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
 
     try {
       await neuralApi.kb.delete(id);
@@ -295,6 +303,7 @@ export default function KnowledgeBasePage() {
         onClose={() => setEditKb(null)}
         onSuccess={refetch}
       />
+      {ConfirmDialogNode}
 
       <div className="flex items-center justify-between">
         <div>

@@ -139,7 +139,7 @@ export default function Navbar() {
         {/* Desktop CTA */}
         <div className="hidden md:flex items-center gap-3">
           <Link
-            href={`${process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3003"}/login?redirect=http%3A%2F%2Flocalhost%3A3008%2Fdashboard`}
+            href={`${process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3003"}/login?redirect=${encodeURIComponent((process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3008") + "/dashboard")}`}
             className="text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             Sign in
@@ -180,7 +180,7 @@ export default function Navbar() {
             ))}
             <div className="border-t border-border my-2 pt-2 flex flex-col gap-2">
               <Link
-                href={`${process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3003"}/login?redirect=http%3A%2F%2Flocalhost%3A3008%2Fdashboard`}
+                href={`${process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3003"}/login?redirect=${encodeURIComponent((process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3008") + "/dashboard")}`}
                 onClick={() => setOpen(false)}
                 className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground"
               >

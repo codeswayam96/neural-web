@@ -44,8 +44,9 @@ import { neuralApi, ModelProvider, ModelKey } from "@/lib/neural-api";
 import { useNeuralFetch } from "@/lib/hooks";
 import { toast } from "sonner";
 import { cn, formatNumber, formatLatency } from "@/lib/utils";
-import { fetchProfile, logout } from "@/lib/api";
+import { fetchProfile } from "@/lib/api";
 import { useEffect } from "react";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 
 const PROVIDER_COLORS: Record<string, string> = {
@@ -80,6 +81,7 @@ export default function ModelsPage() {
   const [isAddingModel, setIsAddingModel] = useState(false);
   const [isAdminAdding, setIsAdminAdding] = useState(false);
   const [activeModelForKeys, setActiveModelForKeys] = useState<ModelProvider | null>(null);
+  const { confirm, ConfirmDialogNode } = useConfirm();
 
   const [newModel, setNewModel] = useState({
     name: "",
@@ -179,7 +181,13 @@ export default function ModelsPage() {
   };
 
   const handleDeleteModel = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this model configuration?")) return;
+    const ok = await confirm({
+      title: "Delete Model",
+      description: "Delete this model configuration? This cannot be undone.",
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       await neuralApi.models.delete(id);
       toast.success("Model removed.");
@@ -192,14 +200,14 @@ export default function ModelsPage() {
 
   return (
     <div className="space-y-6 max-w-6xl">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold">Model Registry</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <p className="text-sm text-muted-foreground mt-0.5 hidden sm:block">
             Orchestrate platform-managed LLMs and your own personal providers.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 shrink-0">
           <Button variant="outline" size="sm" onClick={() => { refetch(); refetchStats(); }}>
             <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
           </Button>
@@ -540,6 +548,7 @@ export default function ModelsPage() {
         onClose={() => setActiveModelForKeys(null)} 
         onUpdate={() => { refetch(); refetchStats(); }}
       />
+      {ConfirmDialogNode}
 
       {error && (
         <div className="flex items-center gap-3 p-4 rounded-xl border border-red-500/30 bg-red-500/10 text-sm text-red-400">
@@ -585,15 +594,15 @@ export default function ModelsPage() {
         </TabsList>
 
         <TabsContent value="platform" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             {loading ? (
               [1, 2, 3, 4].map(i => <ModelCardSkeleton key={i} />)
             ) : (
               data?.platform.map((model) => (
-                <ModelCard 
-                  key={model.id} 
-                  model={model} 
-                  isPlatform 
+                <ModelCard
+                  key={model.id}
+                  model={model}
+                  isPlatform
                   isAdmin={isAdmin}
                   onManageKeys={() => setActiveModelForKeys(model)}
                   onDelete={() => handleDeleteModel(model.id)}
@@ -609,7 +618,7 @@ export default function ModelsPage() {
         </TabsContent>
 
         <TabsContent value="user" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             {loading ? (
               [1, 2].map(i => <ModelCardSkeleton key={i} />)
             ) : (
@@ -711,7 +720,7 @@ function ModelCard({
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {[
             { label: "Context", val: formatNumber(model.contextWindow) },
             { label: "Req Today", val: model.requestsToday.toLocaleString() },

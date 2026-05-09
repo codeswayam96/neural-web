@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { neuralApi, ApiKey, CreateApiKeyPayload, CreatedApiKey } from "@/lib/neural-api";
 import { useNeuralFetch } from "@/lib/hooks";
 import { toast } from "sonner";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 const PERMISSIONS = ["chat", "agents", "analytics", "admin", "images"];
 
@@ -74,7 +75,7 @@ function CreateKeyDialog({ open, onClose, onSuccess }: {
           <button onClick={onClose} className="w-8 h-8 rounded-lg hover:bg-secondary flex items-center justify-center"><X size={15} /></button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-muted-foreground mb-1.5 block">Key Name *</label>
               <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="AuraFlow Production" required
@@ -309,12 +310,19 @@ export default function ApiKeysPage() {
   const [revealKey, setRevealKey] = useState<CreatedApiKey | null>(null);
   const [revokingId, setRevokingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const { confirm, ConfirmDialogNode } = useConfirm();
 
   const { data: keys, loading, error, refetch } = useNeuralFetch(() => neuralApi.apiKeys.list());
   const { data: stats, refetch: refetchStats } = useNeuralFetch(() => neuralApi.apiKeys.stats());
 
   const handleRevoke = async (key: ApiKey) => {
-    if (!confirm(`Revoke key "${key.name}"? Apps using it will immediately lose access.`)) return;
+    const ok = await confirm({
+      title: "Revoke API Key",
+      description: `Revoke "${key.name}"? Apps using it will immediately lose access.`,
+      confirmLabel: "Revoke",
+      destructive: true,
+    });
+    if (!ok) return;
     setRevokingId(key.id);
     try {
       await neuralApi.apiKeys.revoke(key.id);
@@ -325,7 +333,13 @@ export default function ApiKeysPage() {
   };
 
   const handleDelete = async (key: ApiKey) => {
-    if (!confirm(`Delete key "${key.name}"? This action cannot be undone.`)) return;
+    const ok = await confirm({
+      title: "Delete API Key",
+      description: `Delete "${key.name}"? This action cannot be undone.`,
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
     setDeletingId(key.id);
     try {
       await neuralApi.apiKeys.delete(key.id);
@@ -341,26 +355,27 @@ export default function ApiKeysPage() {
     <div className="space-y-6 max-w-6xl">
       <CreateKeyDialog open={createOpen} onClose={() => setCreateOpen(false)} onSuccess={handleCreated} />
       {revealKey && <KeyRevealDialog apiKey={revealKey} onClose={() => setRevealKey(null)} />}
+      {ConfirmDialogNode}
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">API Keys</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">API Keys</h1>
+          <p className="text-sm text-muted-foreground mt-0.5 hidden sm:block">
             Issue <code className="text-xs font-mono bg-secondary px-1.5 py-0.5 rounded">nhub_live_xxx</code> keys to connect your SaaS apps.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 shrink-0">
           <Button variant="outline" size="sm" onClick={refetch} className="h-9">
             <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
           </Button>
-          <Button variant="neural" size="sm" onClick={() => setCreateOpen(true)} className="h-9 px-4">
-            <Plus size={13} className="mr-1.5" /> Issue Key
+          <Button variant="neural" size="sm" onClick={() => setCreateOpen(true)} className="h-9 px-3 sm:px-4">
+            <Plus size={13} className="sm:mr-1.5" /><span className="hidden sm:inline">Issue Key</span>
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Keys list — takes 2/3 */}
         <div className="lg:col-span-2 space-y-4">
           {/* Stats */}
@@ -433,7 +448,7 @@ export default function ApiKeysPage() {
                           )}
                         </div>
                       </div>
-                      <div className="flex flex-col gap-2 shrink-0">
+                      <div className="flex sm:flex-col gap-2 shrink-0">
                         {k.status === "active" && (
                           <Button variant="ghost" size="sm" className="h-8 px-2 text-xs text-muted-foreground hover:text-red-400 hover:bg-red-400/10"
                             onClick={() => handleRevoke(k)} disabled={revokingId === k.id || deletingId === k.id}>

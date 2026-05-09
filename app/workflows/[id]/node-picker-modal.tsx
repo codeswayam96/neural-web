@@ -1,6 +1,6 @@
 "use client";
 import { motion } from "framer-motion";
-import { X, Zap, Cpu, Globe, Code, RefreshCw, Share2, ArrowRight } from "lucide-react";
+import { X, Zap, Cpu, Code, RefreshCw, Share2, ArrowRight } from "lucide-react";
 
 const NODE_TYPES = [
   {

@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { neuralApi, Agent, CreateAgentPayload, ImageGenerationResult, ModelProvider } from "@/lib/neural-api";
 import { useNeuralFetch } from "@/lib/hooks";
 import { toast } from "sonner";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 // ── Image Agent Form Dialog ──────────────────────────────────────────
 function ImageAgentFormDialog({
@@ -366,6 +367,7 @@ export default function ImageGenerationPage() {
   const [editAgent, setEditAgent] = useState<Agent | null>(null);
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const { confirm, ConfirmDialogNode } = useConfirm();
 
   const { data: agents, loading, error, refetch } = useNeuralFetch(
     () => neuralApi.agents.list(search, 'image'),
@@ -373,7 +375,13 @@ export default function ImageGenerationPage() {
   );
 
   const handleDelete = async (agent: Agent) => {
-    if (!confirm(`Delete image agent "${agent.name}"?`)) return;
+    const ok = await confirm({
+      title: "Delete Image Agent",
+      description: `Delete "${agent.name}"? This cannot be undone.`,
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
     setDeletingId(agent.id);
     try {
       await neuralApi.agents.delete(agent.id);
@@ -402,6 +410,7 @@ export default function ImageGenerationPage() {
         onSuccess={refetch}
         editAgent={editAgent}
       />
+      {ConfirmDialogNode}
 
       <div className="flex items-center justify-between">
         <div>

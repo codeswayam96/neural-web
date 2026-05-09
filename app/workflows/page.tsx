@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { neuralApi, Workflow } from "@/lib/neural-api";
 import { toast } from "sonner";
 import Link from "next/link";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
   Dialog,
   DialogContent,
@@ -37,6 +38,15 @@ function CreateWorkflowDialog({
   const [appName, setAppName] = useState("playground");
   const [description, setDescription] = useState("");
   const [creating, setCreating] = useState(false);
+
+  const APP_OPTIONS = [
+    { value: "playground", label: "Playground" },
+    { value: "auraflow", label: "Auraflow" },
+    { value: "ems", label: "EMS" },
+    { value: "neural-hub", label: "NeuralHub" },
+    { value: "admin", label: "Admin Panel" },
+    { value: "codeswayam-web", label: "CodeSwayam Web" },
+  ];
 
   useEffect(() => {
     if (!open) { setName(""); setAppName("playground"); setDescription(""); }
@@ -87,13 +97,16 @@ function CreateWorkflowDialog({
           </div>
           <div className="space-y-1.5">
             <label className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground ml-1">App Name *</label>
-            <input
+            <select
               value={appName}
               onChange={e => setAppName(e.target.value)}
-              placeholder="e.g. auraflow"
-              className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 font-mono"
+              className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50"
               required
-            />
+            >
+              {APP_OPTIONS.map(o => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
             <p className="text-[10px] text-muted-foreground ml-1">The app this workflow belongs to.</p>
           </div>
           <div className="space-y-1.5">
@@ -151,8 +164,8 @@ function WorkflowCard({
 }) {
   return (
     <Card className="hover:border-primary/30 transition-all group border-border/60 bg-secondary/20">
-      <div className="p-4 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4 min-w-0">
+      <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
           <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
             <WorkflowIcon size={18} className="text-primary" />
           </div>
@@ -227,6 +240,7 @@ export default function WorkflowsPage() {
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [runningId, setRunningId] = useState<string | null>(null);
+  const { confirm, ConfirmDialogNode } = useConfirm();
 
   // Execution result modal
   const [executionResult, setExecutionResult] = useState<any>(null);
@@ -270,7 +284,13 @@ export default function WorkflowsPage() {
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Delete workflow "${name}"? This cannot be undone.`)) return;
+    const ok = await confirm({
+      title: "Delete Workflow",
+      description: `Delete "${name}"? This cannot be undone.`,
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       await neuralApi.workflows.delete(id);
       toast.success("Workflow deleted");
@@ -296,28 +316,28 @@ export default function WorkflowsPage() {
   return (
     <div className="space-y-6 max-w-7xl">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold flex items-center gap-2">
+          <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2">
             <WorkflowIcon size={20} className="text-primary" />
             Automated Workflows
           </h2>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <p className="text-sm text-muted-foreground mt-0.5 hidden sm:block">
             Chain LLMs, agents, and APIs into event-driven pipelines
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 shrink-0">
           <Button variant="outline" size="sm" onClick={loadWorkflows}>
             <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
           </Button>
           <Button variant="neural" size="sm" onClick={() => setCreateOpen(true)}>
-            <Plus size={14} className="mr-1" /> Create Workflow
+            <Plus size={14} className="sm:mr-1" /><span className="hidden sm:inline">Create Workflow</span>
           </Button>
         </div>
       </div>
 
-      {/* Test payload input (compact, always visible) */}
-      <div className="flex items-center gap-3 p-3 bg-card/30 rounded-xl border border-border/60 text-xs">
+      {/* Test payload input */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 bg-card/30 rounded-xl border border-border/60 text-xs">
         <span className="text-muted-foreground whitespace-nowrap font-medium">Test payload:</span>
         <input
           value={testPayload}
@@ -325,7 +345,7 @@ export default function WorkflowsPage() {
           placeholder='{ "key": "value" }'
           className="flex-1 bg-secondary border border-border rounded-lg px-3 py-1.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary/50"
         />
-        <span className="text-[10px] text-muted-foreground whitespace-nowrap">Used when clicking Run</span>
+        <span className="text-[10px] text-muted-foreground whitespace-nowrap hidden sm:block">Used when clicking Run</span>
       </div>
 
       {/* Create Dialog */}
@@ -334,6 +354,7 @@ export default function WorkflowsPage() {
         onClose={() => setCreateOpen(false)}
         onSuccess={loadWorkflows}
       />
+      {ConfirmDialogNode}
 
       {/* Workflow List */}
       {loading ? (

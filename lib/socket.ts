@@ -1,28 +1,42 @@
-import { io } from "socket.io-client";
+import { io, Socket } from "socket.io-client";
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3006";
 
-console.log("🔌 Attempting socket connection to:", SOCKET_URL);
-
 /**
- * Standard Socket.io configuration.
- * Now that versions are aligned and IoAdapter is active, 
- * this should connect seamlessly.
+ * Lazy singleton — only connects when first accessed.
+ * Prevents socket connections on unauthenticated/public pages.
  */
-export const socket = io(SOCKET_URL, {
-  autoConnect: true,
-  withCredentials: true,
-  transports: ["polling", "websocket"],
-});
+let _socket: Socket | null = null;
 
-socket.on("connect", () => {
-  console.log("✅ Connected to NeuralHub Events Gateway! ID:", socket.id);
-});
+export function getSocket(): Socket {
+  if (!_socket) {
+    _socket = io(SOCKET_URL, {
+      autoConnect: false,
+      withCredentials: true,
+      transports: ["polling", "websocket"],
+    });
+  }
+  return _socket;
+}
 
-socket.on("connect_error", (err) => {
-  console.error("❌ Socket Connection Error:", err.message);
-});
+/** Connect the socket (call from authenticated pages only). */
+export function connectSocket() {
+  const s = getSocket();
+  if (!s.connected) s.connect();
+  return s;
+}
 
-socket.on("disconnect", (reason) => {
-  console.warn("⚠️ Disconnected from Events Gateway:", reason);
+/** Disconnect and destroy the singleton (call on logout). */
+export function disconnectSocket() {
+  if (_socket) {
+    _socket.disconnect();
+    _socket = null;
+  }
+}
+
+// Legacy export for backward compatibility with existing imports
+export const socket = new Proxy({} as Socket, {
+  get(_target, prop) {
+    return (getSocket() as any)[prop];
+  },
 });

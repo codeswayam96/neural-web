@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import {
   Bot, Send, RefreshCw, ArrowLeft, Loader2,
-  Clock, Hash, Shield, Zap, AlertCircle,
+  Clock, Hash, Shield, Zap, AlertCircle, X, ChevronDown,
 } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -34,6 +34,7 @@ export default function PlaygroundPage() {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [sessionId] = useState(() => `session_${Date.now()}`);
+  const [showSidebar, setShowSidebar] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -110,13 +111,25 @@ export default function PlaygroundPage() {
   }
 
   return (
-    <div className="flex gap-5 h-[calc(100vh-3.5rem-3rem)] max-w-6xl mx-auto">
+    <div className="flex flex-col lg:flex-row gap-0 lg:gap-5 h-[calc(100vh-3.5rem-3rem)] max-w-6xl mx-auto">
+      {/* Mobile sidebar overlay */}
+      {showSidebar && (
+        <div className="fixed inset-0 z-40 lg:hidden" onClick={() => setShowSidebar(false)}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+        </div>
+      )}
+
       {/* Left panel — Agent Config */}
-      <aside className="w-64 shrink-0 flex flex-col gap-4">
+      <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-72 lg:w-64 bg-background lg:bg-transparent border-r lg:border-0 border-border flex flex-col gap-4 p-4 lg:p-0 overflow-y-auto transition-transform duration-300 lg:translate-x-0 lg:shrink-0 ${showSidebar ? "translate-x-0" : "-translate-x-full"}`}>
         <div>
-          <Link href="/agents" className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-4">
-            <ArrowLeft size={11} /> Back to Agents
-          </Link>
+          <div className="flex items-center justify-between mb-4">
+            <Link href="/agents" className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
+              <ArrowLeft size={11} /> Back to Agents
+            </Link>
+            <button className="lg:hidden w-7 h-7 rounded-lg hover:bg-secondary flex items-center justify-center" onClick={() => setShowSidebar(false)}>
+              <X size={14} className="text-muted-foreground" />
+            </button>
+          </div>
 
           <div className="glass rounded-xl border border-border p-4 space-y-3">
             <div className="flex items-center gap-2.5">
@@ -211,12 +224,19 @@ export default function PlaygroundPage() {
       </aside>
 
       {/* Right panel — Chat */}
-      <div className="flex-1 flex flex-col glass rounded-xl border border-border overflow-hidden">
+      <div className="flex-1 flex flex-col glass rounded-xl border border-border overflow-hidden min-h-0">
         {/* Chat header */}
         <div className="flex items-center gap-2.5 px-4 py-3 border-b border-border bg-card/40">
+          <button
+            className="lg:hidden w-7 h-7 rounded-lg border border-border flex items-center justify-center hover:bg-secondary transition-colors shrink-0"
+            onClick={() => setShowSidebar(true)}
+          >
+            <Bot size={13} className="text-primary" />
+          </button>
           <div className="flex items-center gap-1.5 text-xs text-emerald-400">
             <span className="status-dot active" />
-            Agent Playground
+            <span className="hidden sm:inline">Agent Playground</span>
+            <span className="sm:hidden font-mono text-[10px]">{agent.name}</span>
           </div>
           <span className="text-xs text-muted-foreground ml-auto font-mono">
             {sessionId.slice(-8)}

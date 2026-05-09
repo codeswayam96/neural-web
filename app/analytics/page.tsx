@@ -18,12 +18,12 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-6 max-w-6xl">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold">Analytics</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">Tokens, cost, latency, and guardrail metrics across all apps and agents.</p>
+          <p className="text-sm text-muted-foreground mt-0.5 hidden sm:block">Tokens, cost, latency, and guardrail metrics across all apps and agents.</p>
         </div>
-        <Button variant="outline" size="sm" onClick={refetch}>
+        <Button variant="outline" size="sm" onClick={refetch} className="shrink-0">
           <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
         </Button>
       </div>
@@ -100,7 +100,6 @@ export default function AnalyticsPage() {
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Model usage */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm">Model Usage Today</CardTitle>

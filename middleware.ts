@@ -20,7 +20,7 @@ export async function middleware(req: NextRequest) {
   const protectedPaths = [
     "/dashboard", "/agents", "/models", "/api-keys",
     "/analytics", "/knowledge-base", "/workflows",
-    "/settings", "/image-generation", "/billing",
+    "/settings", "/image-generation", "/billing", "/admin",
   ];
   const isProtectedPath = protectedPaths.some(path => pathname.startsWith(path));
 

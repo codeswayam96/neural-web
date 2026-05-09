@@ -2,13 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import {
   Brain, LayoutDashboard, Bot, Cpu, Key,
   BookOpen, Workflow, BarChart3, Settings,
-  ChevronRight, Zap, Bell, User, ImageIcon, CreditCard,
+  ChevronRight, Zap, Bell, User, ImageIcon, CreditCard, ShieldCheck,
+  Menu, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { ErrorBoundary } from "@/components/error-boundary";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { logout } from "@codeswayam/auth";
 import { Button } from "@/components/ui/button";
@@ -27,139 +30,188 @@ const navItems = [
   { icon: Settings, label: "Settings", href: "/settings" },
 ];
 
-function DashboardShell({ 
-  children,
-  showSidebar = true,
-  showTopBar = true,
-}: { 
-  children: React.ReactNode;
-  showSidebar?: boolean;
-  showTopBar?: boolean;
+const adminNavItem = { icon: ShieldCheck, label: "Admin Panel", href: "/admin" };
+
+function SidebarContent({ pathname, user, wallet, isSignedIn, onNavClick }: {
+  pathname: string;
+  user: any;
+  wallet: any;
+  isSignedIn: boolean;
+  onNavClick?: () => void;
 }) {
+  return (
+    <>
+      {/* Logo */}
+      <div className="h-14 flex items-center gap-2.5 px-4 border-b border-border shrink-0">
+        <div className="w-7 h-7 rounded-lg bg-primary/15 border border-primary/30 flex items-center justify-center">
+          <Brain size={14} className="text-primary" />
+        </div>
+        <span className="font-bold text-sm">
+          Neural<span className="text-primary">Hub</span>
+        </span>
+        <Badge variant="neural" className="text-[9px] px-1.5 py-0 ml-auto">v1</Badge>
+      </div>
+
+      {/* Nav */}
+      <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-0.5">
+        {navItems.map((item) => {
+          const active = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={onNavClick}
+              className={cn(
+                "flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium transition-all group",
+                active
+                  ? "bg-primary/15 text-primary border border-primary/25"
+                  : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+              )}
+            >
+              <item.icon size={14} className={active ? "text-primary" : ""} />
+              {item.label}
+              {active && <ChevronRight size={10} className="ml-auto text-primary/60" />}
+            </Link>
+          );
+        })}
+        {/* Admin link — only for admin/superadmin */}
+        {((user as any)?.role === "admin" || (user as any)?.role === "superadmin") && (
+          <>
+            <div className="my-2 border-t border-border/50" />
+            <Link
+              href={adminNavItem.href}
+              onClick={onNavClick}
+              className={cn(
+                "flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium transition-all",
+                pathname.startsWith("/admin")
+                  ? "bg-red-500/10 text-red-400 border border-red-500/20"
+                  : "text-muted-foreground hover:text-red-400 hover:bg-red-500/5"
+              )}
+            >
+              <adminNavItem.icon size={14} />
+              {adminNavItem.label}
+              {pathname.startsWith("/admin") && <ChevronRight size={10} className="ml-auto text-red-400/60" />}
+            </Link>
+          </>
+        )}
+      </nav>
+
+      {/* User footer */}
+      <div className="border-t border-border p-3 shrink-0">
+        <div className="flex items-center gap-2.5 px-2 py-1.5 mb-2">
+          <div className="w-7 h-7 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center shrink-0">
+            <User size={13} className="text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium truncate">{user?.name || "—"}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-[10px] text-muted-foreground truncate">{user?.email || "—"}</p>
+              {wallet?.balance !== undefined && (
+                <div className="flex items-center gap-1 text-[9px] font-bold text-yellow-400 bg-yellow-400/10 px-1 rounded shrink-0">
+                  <Zap size={8} fill="currentColor" />
+                  {wallet.balance.toLocaleString()}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        {isSignedIn && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={async () => { await logout(); window.location.href = "/"; }}
+            className="w-full h-8 text-[10px] text-muted-foreground hover:text-red-400 hover:bg-red-400/5 border border-transparent hover:border-red-400/20"
+          >
+            Sign Out
+          </Button>
+        )}
+      </div>
+    </>
+  );
+}
+
+function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user, isSignedIn } = useCSWUser();
   const { wallet } = useCSWCredits();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const pageLabel = pathname.split("/").filter(Boolean).pop()?.replace(/-/g, " ") || "Dashboard";
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
-      {/* Sidebar */}
-      {showSidebar && (
-        <aside className="w-56 shrink-0 glass-strong border-r border-border flex flex-col">
-          {/* Logo */}
-          <div className="h-14 flex items-center gap-2.5 px-4 border-b border-border">
-            <div className="w-7 h-7 rounded-lg bg-primary/15 border border-primary/30 flex items-center justify-center">
-              <Brain size={14} className="text-primary" />
-            </div>
-            <span className="font-bold text-sm">
-              Neural<span className="text-primary">Hub</span>
-            </span>
-            <Badge variant="neural" className="text-[9px] px-1.5 py-0 ml-auto">v1</Badge>
-          </div>
 
-          {/* Nav */}
-          <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-0.5">
-            {navItems.map((item) => {
-              const active = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all group",
-                    active
-                      ? "bg-primary/15 text-primary border border-primary/25"
-                      : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-                  )}
-                >
-                  <item.icon size={14} className={active ? "text-primary" : ""} />
-                  {item.label}
-                  {active && <ChevronRight size={10} className="ml-auto text-primary/60" />}
-                </Link>
-              );
-            })}
-          </nav>
+      {/* ── Desktop sidebar ── */}
+      <aside className="hidden md:flex w-56 shrink-0 glass-strong border-r border-border flex-col">
+        <SidebarContent pathname={pathname} user={user} wallet={wallet} isSignedIn={!!isSignedIn} />
+      </aside>
 
-          {/* Sidebar user footer */}
-          <div className="border-t border-border p-3">
-            <div className="flex items-center gap-2.5 px-2 py-1.5 mb-2">
-              <div className="w-7 h-7 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center">
-                <User size={13} className="text-primary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium truncate">{user?.name || "—"}</p>
-                <div className="flex items-center gap-2">
-                  <p className="text-[10px] text-muted-foreground truncate">{user?.email || "—"}</p>
-                  {wallet?.balance !== undefined && (
-                    <div className="flex items-center gap-1 text-[9px] font-bold text-yellow-400 bg-yellow-400/10 px-1 rounded">
-                      <Zap size={8} fill="currentColor" />
-                      {wallet.balance.toLocaleString()}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-            {isSignedIn && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={async () => {
-                  await logout();
-                  window.location.href = "/";
-                }}
-                className="w-full h-8 text-[10px] text-muted-foreground hover:text-red-400 hover:bg-red-400/5 border border-transparent hover:border-red-400/20"
-              >
-                Sign Out
-              </Button>
-            )}
-          </div>
-        </aside>
+      {/* ── Mobile drawer overlay ── */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
       )}
 
-      {/* Main content area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {showTopBar && (
-          <header className="h-14 shrink-0 border-b border-border glass-strong flex items-center justify-between px-6">
-            <div>
-              <h1 className="text-sm font-semibold text-foreground capitalize">
-                {pathname.split("/").pop()?.replace(/-/g, " ") || "Dashboard"}
-              </h1>
-              <p className="text-[10px] text-muted-foreground">neural.codeswayam.com</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5 text-xs text-emerald-400">
-                <span className="status-dot active" />
-                All systems operational
-              </div>
-              <ThemeToggle />
-              <button className="w-8 h-8 rounded-lg border border-border flex items-center justify-center hover:bg-secondary transition-colors relative">
-                <Bell size={14} className="text-muted-foreground" />
-              </button>
-              <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-xs text-primary hover:bg-primary/20 transition-colors">
-                <Zap size={11} /> Upgrade
-              </button>
-            </div>
-          </header>
+      {/* ── Mobile drawer ── */}
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 w-64 glass-strong border-r border-border flex flex-col transition-transform duration-300 md:hidden",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
-        <main className="flex-1 overflow-y-auto p-6 bg-grid-sm">{children}</main>
+      >
+        <SidebarContent
+          pathname={pathname}
+          user={user}
+          wallet={wallet}
+          isSignedIn={!!isSignedIn}
+          onNavClick={() => setSidebarOpen(false)}
+        />
+      </aside>
+
+      {/* ── Main content ── */}
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+        {/* Top bar */}
+        <header className="h-14 shrink-0 border-b border-border glass-strong flex items-center justify-between px-4 md:px-6 gap-3">
+          {/* Mobile hamburger */}
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              className="md:hidden w-8 h-8 rounded-lg border border-border flex items-center justify-center hover:bg-secondary transition-colors shrink-0"
+              onClick={() => setSidebarOpen(true)}
+            >
+              <Menu size={16} className="text-muted-foreground" />
+            </button>
+            <div className="min-w-0">
+              <h1 className="text-sm font-semibold text-foreground capitalize truncate">{pageLabel}</h1>
+              <p className="text-[10px] text-muted-foreground hidden sm:block">neural.codeswayam.com</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="hidden sm:flex items-center gap-1.5 text-xs text-emerald-400">
+              <span className="status-dot active" />
+              <span className="hidden lg:inline">All systems operational</span>
+            </div>
+            <ThemeToggle />
+            <button className="w-8 h-8 rounded-lg border border-border flex items-center justify-center hover:bg-secondary transition-colors">
+              <Bell size={14} className="text-muted-foreground" />
+            </button>
+            <button className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-xs text-primary hover:bg-primary/20 transition-colors">
+              <Zap size={11} /> Upgrade
+            </button>
+          </div>
+        </header>
+
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-grid-sm">
+          <ErrorBoundary>{children}</ErrorBoundary>
+        </main>
       </div>
     </div>
   );
 }
 
-/**
- * DashboardLayout — wraps all authenticated dashboard pages.
- * Uses AuthGuard from @codeswayam/auth to enforce SSO session.
- * Unauthenticated users are automatically redirected to the SSO login.
- */
-export default function DashboardLayout({ 
-  children,
-  showSidebar = true,
-  showTopBar = true,
-}: { 
-  children: React.ReactNode;
-  showSidebar?: boolean;
-  showTopBar?: boolean;
-}) {
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthGuard
       fallback={
@@ -171,9 +223,7 @@ export default function DashboardLayout({
         </div>
       }
     >
-      <DashboardShell showSidebar={showSidebar} showTopBar={showTopBar}>
-        {children}
-      </DashboardShell>
+      <DashboardShell>{children}</DashboardShell>
     </AuthGuard>
   );
 }

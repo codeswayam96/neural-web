@@ -442,6 +442,29 @@ export const neuralApi = {
     modelUsage: () => fetcher<ModelUsage[]>('/analytics/model-usage'),
   },
 
+  admin: {
+    stats: () => fetcher<any>('/admin/stats'),
+    // Domains
+    domains: () => fetcher<any[]>('/admin/domains'),
+    addDomain: (domain: string, appName?: string) => fetcher<any>('/admin/domains', { method: 'POST', body: JSON.stringify({ domain, appName }) }),
+    toggleDomain: (id: number, isActive: boolean) => fetcher<any>(`/admin/domains/${id}`, { method: 'PATCH', body: JSON.stringify({ isActive }) }),
+    deleteDomain: (id: number) => fetcher<any>(`/admin/domains/${id}`, { method: 'DELETE' }),
+    // Agents
+    allAgents: () => fetcher<any[]>('/admin/agents'),
+    updateAgent: (id: number, dto: any) => fetcher<any>(`/admin/agents/${id}`, { method: 'PUT', body: JSON.stringify(dto) }),
+    deleteAgent: (id: number) => fetcher<any>(`/admin/agents/${id}`, { method: 'DELETE' }),
+    // Models
+    allModels: () => fetcher<any[]>('/admin/models'),
+    toggleModelStatus: (id: number, status: string) => fetcher<any>(`/admin/models/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+    // Workflows
+    allWorkflows: () => fetcher<any[]>('/admin/workflows'),
+    // Logs
+    logs: (limit?: number) => fetcher<any[]>(`/admin/logs${limit ? `?limit=${limit}` : ''}`),
+    // Prompt config
+    getPromptConfig: () => fetcher<any>('/admin/prompt-config').catch(() => null),
+    upsertPromptConfig: (model: string, systemPrompt: string) => fetcher<any>('/admin/prompt-config', { method: 'PUT', body: JSON.stringify({ model, systemPrompt }) }),
+  },
+
   gateway: {
     generateImage: (prompt: string, negativePrompt?: string, modelId?: string, agentId?: string) =>
       fetcher<ImageGenerationResult>('/v1/generate-image', {

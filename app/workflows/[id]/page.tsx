@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Play, Settings, Activity, ChevronLeft, ChevronRight, Plus, Save, Layout, Clock, CheckCircle2, AlertCircle, Loader2, Globe, Copy, RefreshCw, Trash2, X, Zap, Cpu, Code, Share2, Layers, Lock } from "lucide-react";
+import { Play, Settings, Activity, ChevronLeft, ChevronRight, Plus, Save, Clock, CheckCircle2, AlertCircle, Loader2, Globe, Copy, RefreshCw, Trash2, X, Zap, Cpu, Code, Share2, Layers, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { neuralApi, Workflow, WorkflowExecution, Agent } from "@/lib/neural-api";
@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { socket } from "@/lib/socket";
+import { connectSocket } from "@/lib/socket";
 import { NodePickerModal } from "./node-picker-modal";
 import { NodeConfigPanel } from "./node-config-panel";
 
@@ -24,11 +24,11 @@ function getNodeIcon(type: string) {
 }
 
 const NODE_COLORS: Record<string, { border: string; bg: string; text: string; badge: string }> = {
-  trigger:   { border: "border-amber-500/20",   bg: "bg-amber-500/10",   text: "text-amber-600",   badge: "bg-amber-100 text-amber-600 border border-amber-200" },
-  agent:     { border: "border-blue-500/20",     bg: "bg-blue-500/10",    text: "text-blue-600",    badge: "bg-blue-100 text-blue-600 border border-blue-200" },
-  transform: { border: "border-emerald-500/20",  bg: "bg-emerald-500/10", text: "text-emerald-600", badge: "bg-emerald-100 text-emerald-600 border border-emerald-200" },
-  logic:     { border: "border-purple-500/20",   bg: "bg-purple-500/10",  text: "text-purple-600",  badge: "bg-purple-100 text-purple-600 border border-purple-200" },
-  http:      { border: "border-pink-500/20",     bg: "bg-pink-500/10",    text: "text-pink-600",    badge: "bg-pink-100 text-pink-600 border border-pink-200" },
+  trigger:   { border: "border-amber-500/20",   bg: "bg-amber-500/10",   text: "text-amber-600",   badge: "bg-amber-500/15 text-amber-400 border border-amber-500/30" },
+  agent:     { border: "border-blue-500/20",     bg: "bg-blue-500/10",    text: "text-blue-600",    badge: "bg-blue-500/15 text-blue-400 border border-blue-500/30" },
+  transform: { border: "border-emerald-500/20",  bg: "bg-emerald-500/10", text: "text-emerald-600", badge: "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30" },
+  logic:     { border: "border-purple-500/20",   bg: "bg-purple-500/10",  text: "text-purple-600",  badge: "bg-purple-500/15 text-purple-400 border border-purple-500/30" },
+  http:      { border: "border-pink-500/20",     bg: "bg-pink-500/10",    text: "text-pink-600",    badge: "bg-pink-500/15 text-pink-400 border border-pink-500/30" },
 };
 
 const RECIPES = [
@@ -54,12 +54,16 @@ export default function WorkflowDetailPage() {
   const [showNodePicker, setShowNodePicker] = useState(false);
   const [insertAfterIndex, setInsertAfterIndex] = useState<number | undefined>(undefined);
   const [showRecipes, setShowRecipes] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showPalette, setShowPalette] = useState(false);
+  const [showConfigPanel, setShowConfigPanel] = useState(false);
 
   const selectedNode = localNodes.find(n => n.id === selectedNodeId);
 
   useEffect(() => {
     Promise.all([loadWorkflow(), loadExecutions(), loadAgents(), checkPlatformModel()]);
-    socket.on("neural-request", (ev: any) => {
+    const s = connectSocket();
+    s.on("neural-request", (ev: any) => {
       if (ev.type === "workflow" && ev.workflowId === Number(id)) {
         if (ev.event === "node_started") setNodeStatuses(p => ({ ...p, [ev.nodeId]: "running" }));
         if (ev.event === "node_completed") setNodeStatuses(p => ({ ...p, [ev.nodeId]: "completed" }));
@@ -68,7 +72,7 @@ export default function WorkflowDetailPage() {
         if (ev.event === "failed") { setRunning(false); toast.error(`Failed: ${ev.error}`); loadExecutions(); }
       }
     });
-    return () => { socket.off("neural-request"); };
+    return () => { s.off("neural-request"); };
   }, [id]);
 
   const loadWorkflow = async () => {
@@ -120,6 +124,7 @@ export default function WorkflowDetailPage() {
         });
       }
       toast.success("Workflow saved!");
+      setHasUnsavedChanges(false);
       loadWorkflow();
     } catch (e: any) { toast.error(e.message); }
     finally { setSaving(false); }
@@ -151,6 +156,7 @@ export default function WorkflowDetailPage() {
     else setLocalNodes(p => [...p, node]);
     setSelectedNodeId(node.id);
     setShowRecipes(false);
+    setHasUnsavedChanges(true);
   };
 
   const applyRecipe = (recipe: typeof RECIPES[0]) => {
@@ -158,12 +164,13 @@ export default function WorkflowDetailPage() {
     const nodes = recipe.nodes.map((n, i) => ({ id: `r-${i}-${Math.random().toString(36).slice(2, 6)}`, ...n }));
     setLocalNodes(nodes);
     setShowRecipes(false);
+    setHasUnsavedChanges(true);
     toast.success(`"${recipe.title}" recipe loaded!`);
   };
 
-  const updateNodeConfig = (nodeId: string, updates: any) => setLocalNodes(p => p.map(n => n.id === nodeId ? { ...n, config: { ...n.config, ...updates } } : n));
-  const updateNodeName = (nodeId: string, name: string) => setLocalNodes(p => p.map(n => n.id === nodeId ? { ...n, name } : n));
-  const removeNode = (nodeId: string) => { setLocalNodes(p => p.filter(n => n.id !== nodeId)); if (selectedNodeId === nodeId) setSelectedNodeId(null); };
+  const updateNodeConfig = (nodeId: string, updates: any) => { setLocalNodes(p => p.map(n => n.id === nodeId ? { ...n, config: { ...n.config, ...updates } } : n)); setHasUnsavedChanges(true); };
+  const updateNodeName = (nodeId: string, name: string) => { setLocalNodes(p => p.map(n => n.id === nodeId ? { ...n, name } : n)); setHasUnsavedChanges(true); };
+  const removeNode = (nodeId: string) => { setLocalNodes(p => p.filter(n => n.id !== nodeId)); if (selectedNodeId === nodeId) setSelectedNodeId(null); setHasUnsavedChanges(true); };
 
   if (loading) return <div className="flex items-center justify-center min-h-[60vh]"><Loader2 className="animate-spin text-primary" size={28} /></div>;
   if (!workflow) return <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4"><AlertCircle size={32} className="text-destructive" /><p className="text-muted-foreground">Workflow not found</p><Link href="/workflows"><Button variant="neural">Back to Workflows</Button></Link></div>;
@@ -179,44 +186,52 @@ export default function WorkflowDetailPage() {
       )}
 
       {/* Header */}
-      <header className="h-14 border-b border-border bg-background/90 backdrop-blur-xl px-5 flex items-center justify-between shrink-0 z-30">
-        <div className="flex items-center gap-3">
-          <Link href="/workflows"><Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl"><ChevronLeft size={18} /></Button></Link>
-          <div className="h-6 w-px bg-border" />
-          <div>
+      <header className="h-14 border-b border-border bg-background/90 backdrop-blur-xl px-3 sm:px-5 flex items-center justify-between shrink-0 z-30 gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <Link href="/workflows" onClick={e => { if (hasUnsavedChanges) { e.preventDefault(); if (window.confirm("You have unsaved changes. Leave anyway?")) window.location.href = "/workflows"; } }}>
+            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl shrink-0"><ChevronLeft size={18} /></Button>
+          </Link>
+          <div className="h-6 w-px bg-border shrink-0" />
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-sm">{workflow.name}</span>
+              <span className="font-bold text-sm truncate max-w-[120px] sm:max-w-none">{workflow.name}</span>
               <button
                 onClick={async () => {
                   const newStatus = workflow.status === "active" ? "draft" : "active";
                   const updated = await neuralApi.workflows.update(id as string, { status: newStatus }).catch(() => null);
                   if (updated) { setWorkflow(updated); toast.success(newStatus === "active" ? "🚀 Published!" : "Set to Draft"); }
                 }}
-                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${workflow.status === "active" ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" : "bg-amber-500/10 text-amber-400 border-amber-500/20"}`}
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${workflow.status === "active" ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" : "bg-amber-500/10 text-amber-400 border-amber-500/20"}`}
               >
                 <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1 ${workflow.status === "active" ? "bg-emerald-400 animate-pulse" : "bg-amber-400"}`} />
-                {workflow.status}
+                <span className="hidden sm:inline">{workflow.status}</span>
               </button>
             </div>
-            <p className="text-[10px] text-muted-foreground">{localNodes.length} steps · {workflow.appName}</p>
+            <p className="text-[10px] text-muted-foreground hidden sm:block">{localNodes.length} steps · {workflow.appName}</p>
           </div>
         </div>
 
-        <nav className="flex bg-secondary/50 border border-border/50 p-0.5 rounded-xl">
+        <nav className="flex bg-secondary/50 border border-border/50 p-0.5 rounded-xl shrink-0">
           {(["builder", "history", "settings"] as const).map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)}
-              className={`px-4 py-1.5 text-[11px] font-bold rounded-lg capitalize transition-all ${activeTab === tab ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
-              {tab}
+              className={`px-2 sm:px-4 py-1.5 text-[11px] font-bold rounded-lg capitalize transition-all ${activeTab === tab ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+              {tab === "builder" ? <span className="sm:hidden"><Layers size={12} /></span> : null}
+              {tab === "history" ? <span className="sm:hidden"><Activity size={12} /></span> : null}
+              {tab === "settings" ? <span className="sm:hidden"><Settings size={12} /></span> : null}
+              <span className="hidden sm:inline">{tab}</span>
             </button>
           ))}
         </nav>
 
-        <div className="flex gap-2">
+        <div className="flex gap-1.5 shrink-0">
           <Button variant="outline" size="sm" className="h-9 text-xs rounded-xl border-border/80" onClick={handleSave} disabled={saving}>
-            {saving ? <Loader2 size={13} className="animate-spin mr-1.5" /> : <Save size={13} className="mr-1.5" />} Save Pipeline
+            {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+            <span className="hidden sm:inline ml-1">Save</span>
+            {hasUnsavedChanges && !saving && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" title="Unsaved changes" />}
           </Button>
           <Button variant="neural" size="sm" className="h-9 text-xs rounded-xl" onClick={handleRun} disabled={running}>
-            {running ? <Loader2 size={13} className="animate-spin mr-1.5" /> : <Play size={13} className="mr-1.5 fill-current" />} Execute Run
+            {running ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} className="fill-current" />}
+            <span className="hidden sm:inline ml-1">Run</span>
           </Button>
         </div>
       </header>
@@ -225,8 +240,15 @@ export default function WorkflowDetailPage() {
       <main className="flex-1 overflow-hidden flex">
         {activeTab === "builder" ? (
           <>
+            {/* Mobile palette overlay */}
+            {showPalette && (
+              <div className="fixed inset-0 z-40 lg:hidden" onClick={() => setShowPalette(false)}>
+                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+              </div>
+            )}
+
             {/* Left Palette Sidebar */}
-            <aside className="w-72 border-r border-border bg-background/90 backdrop-blur-xl flex flex-col shrink-0 z-20 overflow-y-auto">
+            <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-72 border-r border-border bg-background/95 backdrop-blur-xl flex flex-col shrink-0 overflow-y-auto transition-transform duration-300 lg:translate-x-0 ${showPalette ? "translate-x-0" : "-translate-x-full"}`}>
               <div className="p-5">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
                   <Layers size={12} className="text-primary" /> NODE PALETTE
@@ -263,29 +285,74 @@ export default function WorkflowDetailPage() {
                 <div className="space-y-3">
                   <div className="p-4 rounded-2xl border border-border bg-card flex flex-col gap-1">
                     <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
-                      SYSTEM LATENCY <span className="px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-500 text-[9px] uppercase tracking-wider font-bold">STABLE</span>
+                      AVG LATENCY
+                      <span className={`px-2 py-0.5 rounded-md text-[9px] uppercase tracking-wider font-bold ${
+                        executions.length === 0 ? 'bg-secondary text-muted-foreground' :
+                        (executions.filter(e => e.status === 'completed').reduce((s, e) => s + (e.latencyMs || 0), 0) / Math.max(executions.filter(e => e.status === 'completed').length, 1)) < 3000
+                          ? 'bg-blue-500/10 text-blue-500' : 'bg-amber-500/10 text-amber-500'
+                      }`}>
+                        {executions.length === 0 ? 'NO DATA' : 'LIVE'}
+                      </span>
                     </div>
-                    <p className="text-2xl font-black">1.2s</p>
+                    <p className="text-2xl font-black">
+                      {executions.length === 0 ? '—' : (() => {
+                        const completed = executions.filter(e => e.status === 'completed');
+                        if (completed.length === 0) return '—';
+                        const avg = completed.reduce((s, e) => s + (e.latencyMs || 0), 0) / completed.length;
+                        return avg >= 1000 ? `${(avg / 1000).toFixed(1)}s` : `${Math.round(avg)}ms`;
+                      })()}
+                    </p>
                   </div>
                   <div className="p-4 rounded-2xl border border-border bg-card flex flex-col gap-1">
                     <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
-                      NODE THROUGHPUT <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500 text-[9px] uppercase tracking-wider font-bold">UP</span>
+                      TOTAL RUNS
+                      <span className={`px-2 py-0.5 rounded-md text-[9px] uppercase tracking-wider font-bold ${
+                        executions.filter(e => e.status === 'completed').length > 0 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-secondary text-muted-foreground'
+                      }`}>
+                        {executions.filter(e => e.status === 'completed').length > 0 ? 'OK' : 'NONE'}
+                      </span>
                     </div>
-                    <p className="text-2xl font-black">120/min</p>
+                    <p className="text-2xl font-black">{executions.length}</p>
                   </div>
                   <div className="p-4 rounded-2xl border border-border bg-card flex flex-col gap-1">
                     <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
-                      ERROR THRESHOLD <span className="px-2 py-0.5 rounded-md bg-red-500/10 text-red-500 text-[9px] uppercase tracking-wider font-bold">DOWN</span>
+                      ERROR RATE
+                      <span className={`px-2 py-0.5 rounded-md text-[9px] uppercase tracking-wider font-bold ${
+                        executions.length === 0 ? 'bg-secondary text-muted-foreground' :
+                        executions.filter(e => e.status === 'failed').length === 0 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'
+                      }`}>
+                        {executions.length === 0 ? 'NO DATA' : executions.filter(e => e.status === 'failed').length === 0 ? 'CLEAN' : 'ERRORS'}
+                      </span>
                     </div>
-                    <p className="text-2xl font-black text-muted-foreground">---</p>
+                    <p className="text-2xl font-black">
+                      {executions.length === 0 ? '—' : `${Math.round((executions.filter(e => e.status === 'failed').length / executions.length) * 100)}%`}
+                    </p>
                   </div>
                 </div>
               </div>
             </aside>
 
             {/* Canvas */}
-            <div className="flex-1 relative overflow-auto bg-slate-50/30 bg-[radial-gradient(hsl(var(--foreground)/0.15)_1.5px,transparent_1.5px)] [background-size:40px_40px] flex flex-col items-center p-8"
-              onClick={() => setSelectedNodeId(null)}>
+            <div className="flex-1 relative overflow-auto bg-slate-50/30 bg-[radial-gradient(hsl(var(--foreground)/0.15)_1.5px,transparent_1.5px)] [background-size:40px_40px] flex flex-col items-center p-4 sm:p-8"
+              onClick={() => { setSelectedNodeId(null); setShowConfigPanel(false); }}>
+
+              {/* Mobile toolbar */}
+              <div className="lg:hidden flex items-center gap-2 w-full mb-4">
+                <button
+                  onClick={e => { e.stopPropagation(); setShowPalette(true); }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-card text-xs font-medium hover:bg-secondary transition-colors"
+                >
+                  <Layers size={13} className="text-primary" /> Palette
+                </button>
+                {selectedNode && (
+                  <button
+                    onClick={e => { e.stopPropagation(); setShowConfigPanel(true); }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-xs font-medium text-primary"
+                  >
+                    <Settings size={13} /> Configure
+                  </button>
+                )}
+              </div>
 
               {/* Recipe picker overlay */}
               {showRecipes && (
@@ -317,7 +384,7 @@ export default function WorkflowDetailPage() {
                       <motion.div key={node.id} layout initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} className="w-full flex flex-col items-center">
                         {/* Node card */}
                         <div
-                          onClick={e => { e.stopPropagation(); setSelectedNodeId(node.id); }}
+                          onClick={e => { e.stopPropagation(); setSelectedNodeId(node.id); setShowConfigPanel(true); }}
                           className={`w-72 rounded-3xl border-2 cursor-pointer transition-all duration-200 relative group bg-card shadow-sm ${isSelected ? `border-primary ring-4 ring-primary/10 shadow-xl` : "border-border/50 hover:border-primary/50 hover:shadow-lg"} ${status === "running" ? "animate-pulse ring-2 ring-primary/40" : ""}`}
                         >
                           {/* Type badge */}
@@ -377,8 +444,15 @@ export default function WorkflowDetailPage() {
               </div>
             </div>
 
+            {/* Mobile config panel overlay */}
+            {showConfigPanel && (
+              <div className="fixed inset-0 z-40 lg:hidden" onClick={() => setShowConfigPanel(false)}>
+                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+              </div>
+            )}
+
             {/* Right config panel */}
-            <aside className="w-80 border-l border-border bg-background flex flex-col shrink-0 z-20 overflow-y-auto">
+            <aside className={`fixed lg:static inset-y-0 right-0 z-50 w-80 border-l border-border bg-background flex flex-col shrink-0 overflow-y-auto transition-transform duration-300 lg:translate-x-0 ${showConfigPanel ? "translate-x-0" : "translate-x-full"}`}>
               <div className="px-6 py-5 border-b border-border/50">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
                   <Settings size={14} className="text-primary" /> CONFIGURATION
@@ -405,16 +479,21 @@ export default function WorkflowDetailPage() {
                 />
                 {selectedNode && (localNodes.length > 1 && (selectedNode.type !== 'trigger' || localNodes.filter(n => n.type === 'trigger').length > 1)) && (
                   <div className="mt-8 pt-6 border-t border-border/50">
-                    <button onClick={() => removeNode(selectedNode.id)} className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border border-red-500/20 bg-red-500/5 text-red-500 text-xs font-bold hover:bg-red-500/10 transition-colors">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeNode(selectedNode.id)}
+                      className="w-full border border-red-500/20 bg-red-500/5 text-red-500 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/30"
+                    >
                       <Trash2 size={14} /> Terminate Component
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>
             </aside>
           </>
         ) : activeTab === "history" ? (
-          <div className="flex-1 p-8 overflow-y-auto">
+          <div className="flex-1 p-4 sm:p-8 overflow-y-auto">
             <div className="max-w-3xl mx-auto space-y-6">
               <div className="flex items-center justify-between">
                 <div><h2 className="text-lg font-bold">Run History</h2><p className="text-xs text-muted-foreground mt-0.5">{executions.length} total executions</p></div>
@@ -450,14 +529,14 @@ export default function WorkflowDetailPage() {
             </div>
           </div>
         ) : (
-          <div className="flex-1 p-8 overflow-y-auto">
+          <div className="flex-1 p-4 sm:p-8 overflow-y-auto">
             <div className="max-w-2xl mx-auto space-y-6">
               <h2 className="text-lg font-bold">Settings</h2>
               <div className="p-5 rounded-xl border border-border bg-card space-y-3">
                 <p className="font-semibold text-sm flex items-center gap-2"><Globe size={15} className="text-primary" /> Webhook URL</p>
                 <div className="flex items-center gap-2 bg-secondary/40 p-3 rounded-lg border border-border/60 font-mono text-xs break-all text-primary/80">
-                  {`http://localhost:3006/workflows/trigger/${id}`}
-                  <button onClick={() => { navigator.clipboard.writeText(`http://localhost:3006/workflows/trigger/${id}`); toast.success("Copied!"); }} className="shrink-0 ml-auto text-muted-foreground hover:text-foreground">
+                  {`${process.env.NEXT_PUBLIC_NEURAL_API_URL || "http://localhost:3006"}/workflows/trigger/${id}`}
+                  <button onClick={() => { navigator.clipboard.writeText(`${process.env.NEXT_PUBLIC_NEURAL_API_URL || "http://localhost:3006"}/workflows/trigger/${id}`); toast.success("Copied!"); }} className="shrink-0 ml-auto text-muted-foreground hover:text-foreground">
                     <Copy size={13} />
                   </button>
                 </div>

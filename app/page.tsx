@@ -163,7 +163,7 @@ export default function HomePage() {
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
               <Button variant="neural" size="lg" asChild>
-                <Link href={authed ? "/dashboard" : `${process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3003"}/login?redirect=http%3A%2F%2Flocalhost%3A3008%2Fdashboard`}>
+                <Link href={authed ? "/dashboard" : `${process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3003"}/login?redirect=${encodeURIComponent((process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3008") + "/dashboard")}`}>
                   <Zap size={16} />
                   Open Dashboard <ArrowRight size={14} />
                 </Link>
@@ -463,7 +463,7 @@ export default function HomePage() {
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <Button variant="neural" size="lg" asChild>
-                  <Link href={authed ? "/dashboard" : `${process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3003"}/login?redirect=http%3A%2F%2Flocalhost%3A3008%2Fdashboard`}>
+                  <Link href={authed ? "/dashboard" : `${process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3003"}/login?redirect=${encodeURIComponent((process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3008") + "/dashboard")}`}>
                     <Zap size={15} /> Open Dashboard <ArrowRight size={14} />
                   </Link>
                 </Button>

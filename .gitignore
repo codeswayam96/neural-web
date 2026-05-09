@@ -1,41 +1,68 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
-/node_modules
-/.pnp
+# ─── Dependencies ────────────────────────────────────────────────
+node_modules/
+.pnp
 .pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
 
-# testing
-/coverage
+# ─── Next.js ─────────────────────────────────────────────────────
+.next/
+out/
+next-env.d.ts
 
-# next.js
-/.next/
-/out/
-
-# production
+# ─── Build output ────────────────────────────────────────────────
 /build
+/dist
 
-# misc
-.DS_Store
-*.pem
+# ─── Environment files ───────────────────────────────────────────
+.env
+.env.*
+!.env.example
 
-# debug
+# ─── Logs ────────────────────────────────────────────────────────
+*.log
+*.log.*
+logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# ─── Debug / temp output ─────────────────────────────────────────
+build_output.log
+build_output.txt
+lint_output.txt
+ts_errors.txt
+*.tmp
+*.temp
 
-# vercel
+# ─── TypeScript ──────────────────────────────────────────────────
+*.tsbuildinfo
+
+# ─── Turbo ───────────────────────────────────────────────────────
+.turbo/
+
+# ─── Testing ─────────────────────────────────────────────────────
+/coverage
+
+# ─── Vercel ──────────────────────────────────────────────────────
 .vercel
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+# ─── OS artefacts ────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Editor ──────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ─── Yarn ────────────────────────────────────────────────────────
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions

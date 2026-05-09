@@ -5,7 +5,7 @@ import { Agent, neuralApi } from "@/lib/neural-api";
 import { toast } from "sonner";
 
 const inp = "w-full bg-secondary/30 border border-border/80 rounded-xl px-4 py-2.5 text-sm font-medium text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-muted-foreground/50 shadow-sm";
-const label = "text-[10px] font-bold uppercase tracking-widest text-muted-foreground block mb-2";
+const labelCls = "text-[10px] font-bold uppercase tracking-widest text-muted-foreground block mb-2";
 const req = <span className="ml-1.5 text-[9px] font-black px-2 py-0.5 rounded-md bg-red-500/10 text-red-500 border border-red-500/20 uppercase tracking-wider">REQUIRED</span>;
 const opt = <span className="ml-1.5 text-[9px] font-black px-2 py-0.5 rounded-md bg-secondary text-muted-foreground border border-border uppercase tracking-wider">OPTIONAL</span>;
 const auto = <span className="ml-1.5 text-[9px] font-black px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-500 border border-blue-500/20 uppercase tracking-wider">AUTO</span>;
@@ -26,7 +26,7 @@ function Grid({ cols = 2, children }: { cols?: number; children: React.ReactNode
 function Field({ label: l, hint, className = "", children }: { label: React.ReactNode; hint?: string; className?: string; children: React.ReactNode }) {
   return (
     <div className={`space-y-1.5 ${className}`}>
-      <div className={label as any}>{l}</div>
+      <div className={labelCls}>{l}</div>
       {children}
       {hint && <p className="text-[10px] text-muted-foreground italic mt-1">{hint}</p>}
     </div>
@@ -348,11 +348,26 @@ function HttpPanel({ node, onUpdate, onRename }: any) {
           <input className={inp} value={node.config?.url || ""} onChange={e => onUpdate({ url: e.target.value })} placeholder="http://localhost:3000/send" />
         </Field>
         <Field label="CONTENT-TYPE">
-          <input className={inp} value={node.config?.contentType || "application/json"} onChange={e => onUpdate({ contentType: e.target.value })} />
+          <select className={inp} value={node.config?.contentType || "application/json"} onChange={e => onUpdate({ contentType: e.target.value })}>
+            <option value="application/json">application/json</option>
+            <option value="application/x-www-form-urlencoded">application/x-www-form-urlencoded</option>
+            <option value="multipart/form-data">multipart/form-data</option>
+            <option value="text/plain">text/plain</option>
+          </select>
         </Field>
-        <Field label="AUTH HEADER">
-          <input className={inp} value={node.config?.authHeader || "x-api-key: {{WEBHOOK_SECRET}}"} onChange={e => onUpdate({ authHeader: e.target.value })} />
+        <Field label="AUTH TYPE">
+          <select className={inp} value={node.config?.authType || "none"} onChange={e => onUpdate({ authType: e.target.value })}>
+            <option value="none">No Authentication</option>
+            <option value="bearer">Bearer Token</option>
+            <option value="apiKey">API Key (x-api-key)</option>
+            <option value="basic">Basic Auth</option>
+          </select>
         </Field>
+        {node.config?.authType && node.config.authType !== "none" && (
+          <Field label="TOKEN / KEY" hint="Use {{ENV_VAR}} to reference environment variables">
+            <input className={inp} type="password" value={node.config?.token || ""} onChange={e => onUpdate({ token: e.target.value })} placeholder="{{WEBHOOK_SECRET}}" />
+          </Field>
+        )}
       </Grid>
     </Section>
 
@@ -519,6 +534,9 @@ function TransformPanel({ node, onUpdate, onRename }: any) {
         <Field label={<>INPUT SOURCE{auto}</>} hint="Root of incoming request data">
           <input className={inp} value={node.config?.inputSource || "{{trigger}}"} onChange={e => onUpdate({ inputSource: e.target.value })} />
         </Field>
+        <Field label={<>TRANSFORM INSTRUCTION{req}</>} hint="Tell the AI how to reshape the data">
+          <textarea className={`${inp} min-h-[80px] resize-none text-xs`} value={node.config?.instruction || ""} onChange={e => onUpdate({ instruction: e.target.value })} placeholder="Extract only name, email, and score fields. Rename 'user_id' to 'id'." />
+        </Field>
       </Grid>
     </Section>
 
@@ -606,10 +624,13 @@ function TransformPanel({ node, onUpdate, onRename }: any) {
     </Section>
 
     <Section title="Output schema">
-      <textarea className={`${inp} min-h-[140px] resize-none font-mono text-xs leading-relaxed bg-secondary/10`} 
-        readOnly
-        value={node.config?.outputSchema || "{}"} 
-      />
+      <Field label="EXPECTED OUTPUT SCHEMA (JSON)" hint="Optional: describe the shape you expect back">
+        <textarea className={`${inp} min-h-[140px] resize-none font-mono text-xs leading-relaxed`} 
+          value={node.config?.outputSchema || ""} 
+          onChange={e => onUpdate({ outputSchema: e.target.value })}
+          placeholder={'{\n  "id": "string",\n  "email": "string",\n  "score": "number"\n}'}
+        />
+      </Field>
       <div className="flex justify-end mt-2">
         <button className="text-[10px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
           Learn JSONPath syntax ↗

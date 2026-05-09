@@ -33,6 +33,7 @@ export const metadata: Metadata = {
 
 import { ThemeProvider } from "@/components/theme-provider";
 import { CSWProvider } from "@codeswayam/auth";
+import { Analytics } from "@codeswayam/analytics";
 import { Toaster } from "sonner";
 
 export default function RootLayout({
@@ -55,6 +56,12 @@ export default function RootLayout({
         />
       </head>
       <body className={`${inter.variable} antialiased`}>
+        <Analytics
+          gtmId={process.env.NEXT_PUBLIC_GTM_ID}
+          ga4Id={process.env.NEXT_PUBLIC_GA4_ID}
+          metaPixelId={process.env.NEXT_PUBLIC_META_PIXEL_ID}
+          appName="neural"
+        />
         <CSWProvider
           apiUrl={process.env.NEXT_PUBLIC_API_URL}
           authDomain={process.env.NEXT_PUBLIC_AUTH_URL}
