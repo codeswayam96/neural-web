@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { neuralApi, ApiKey, CreateApiKeyPayload, CreatedApiKey } from "@/lib/neural-api";
 import { useNeuralFetch } from "@/lib/hooks";
+import { useCSWUser } from "@codeswayam/auth";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 
@@ -34,11 +35,12 @@ function CodeBlock({ code, language = "bash" }: { code: string; language?: strin
 }
 
 // ── Create Key Dialog ──────────────────────────────────────────────────
-function CreateKeyDialog({ open, onClose, onSuccess }: {
-  open: boolean; onClose: () => void; onSuccess: (k: CreatedApiKey) => void;
+function CreateKeyDialog({ open, onClose, onSuccess, isAdmin }: {
+  open: boolean; onClose: () => void; onSuccess: (k: CreatedApiKey) => void; isAdmin: boolean;
 }) {
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState<CreateApiKeyPayload>({ name: "", appName: "", permissions: ["chat"], rateLimit: 1000, allowedDomains: [], allowedIps: [] });
+  const defaultRateLimit = isAdmin ? 0 : 1000;
+  const [form, setForm] = useState<CreateApiKeyPayload>({ name: "", appName: "", permissions: ["chat"], rateLimit: defaultRateLimit, allowedDomains: [], allowedIps: [], scope: 'user' });
 
   if (!open) return null;
 
@@ -87,9 +89,33 @@ function CreateKeyDialog({ open, onClose, onSuccess }: {
                 className="w-full px-3 py-2.5 text-sm bg-secondary border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 font-mono" />
             </div>
           </div>
+          {isAdmin && (
+            <div>
+              <label className="text-xs text-muted-foreground mb-1.5 block">Key Scope</label>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setForm({ ...form, scope: 'user', rateLimit: 1000 })}
+                  className={`flex-1 px-3 py-2 rounded-xl text-xs border transition-all font-medium ${
+                    form.scope === 'user' ? 'bg-primary/15 border-primary/40 text-primary' : 'border-border text-muted-foreground hover:border-primary/30'
+                  }`}>
+                  👤 User Project
+                </button>
+                <button type="button" onClick={() => setForm({ ...form, scope: 'platform', rateLimit: 0 })}
+                  className={`flex-1 px-3 py-2 rounded-xl text-xs border transition-all font-medium ${
+                    form.scope === 'platform' ? 'bg-primary/15 border-primary/40 text-primary' : 'border-border text-muted-foreground hover:border-primary/30'
+                  }`}>
+                  🏢 Platform (Internal)
+                </button>
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-1">
+                {form.scope === 'platform' ? 'For your own SaaS products (auraflow, admin-panel, etc.)' : "For external users' projects using NeuralHub"}
+              </p>
+            </div>
+          )}
           <div>
-            <label className="text-xs text-muted-foreground mb-1.5 block">Rate Limit (requests/day)</label>
-            <input type="number" value={form.rateLimit} onChange={(e) => setForm({ ...form, rateLimit: Number(e.target.value) })} min={1} max={100000}
+            <label className="text-xs text-muted-foreground mb-1.5 block">
+              Rate Limit (requests/day){form.scope === 'platform' && <span className="ml-1 text-emerald-400">— 0 = unlimited</span>}
+            </label>
+            <input type="number" value={form.rateLimit} onChange={(e) => setForm({ ...form, rateLimit: Number(e.target.value) })} min={0} max={100000}
               className="w-full px-3 py-2.5 text-sm bg-secondary border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30" />
           </div>
           <div>
@@ -311,6 +337,8 @@ export default function ApiKeysPage() {
   const [revokingId, setRevokingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const { confirm, ConfirmDialogNode } = useConfirm();
+  const { user } = useCSWUser();
+  const isAdmin = (user as any)?.role === 'admin' || (user as any)?.role === 'superadmin';
 
   const { data: keys, loading, error, refetch } = useNeuralFetch(() => neuralApi.apiKeys.list());
   const { data: stats, refetch: refetchStats } = useNeuralFetch(() => neuralApi.apiKeys.stats());
@@ -353,7 +381,7 @@ export default function ApiKeysPage() {
 
   return (
     <div className="space-y-6 max-w-6xl">
-      <CreateKeyDialog open={createOpen} onClose={() => setCreateOpen(false)} onSuccess={handleCreated} />
+      <CreateKeyDialog open={createOpen} onClose={() => setCreateOpen(false)} onSuccess={handleCreated} isAdmin={isAdmin} />
       {revealKey && <KeyRevealDialog apiKey={revealKey} onClose={() => setRevealKey(null)} />}
       {ConfirmDialogNode}
 
@@ -433,6 +461,7 @@ export default function ApiKeysPage() {
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-sm font-semibold">{k.name}</span>
                           <code className="text-[10px] font-mono text-muted-foreground bg-secondary px-1.5 rounded">{k.app}</code>
+                          <Badge variant={k.scope === 'platform' ? 'outline' : 'secondary'} className="text-[9px] uppercase">{k.scope}</Badge>
                           <Badge variant={k.status === "active" ? "success" : "destructive"} className="text-[9px] ml-auto uppercase">{k.status}</Badge>
                         </div>
                         <code className="text-xs font-mono text-muted-foreground">{k.keyPreview}</code>

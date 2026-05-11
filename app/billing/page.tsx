@@ -4,7 +4,7 @@ import { useState } from "react";
 import { 
   CreditCard, Zap, History, TrendingUp, 
   ArrowUpRight, ShoppingBag, ShieldCheck, 
-  RefreshCw, Plus, Clock, DollarSign
+  RefreshCw, Plus, Clock, DollarSign, Crown, Bot, Sparkles
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,10 +18,31 @@ import {
 import { format } from "date-fns";
 import { motion } from "framer-motion";
 
+// ── Plan tier → AI access rules (mirrors neural-web subscription logic) ────────
+const NEURAL_AI_PLANS = ["neural", "pro", "enterprise", "bundle"];
+
+function resolveNeuralAccess(subscriptions: any[]) {
+  const activeSub = subscriptions.find(
+    (s) =>
+      s.status === "active" &&
+      (s.productSaasId?.includes("neural") ||
+        (s as any).productFamily === "neural" ||
+        s.planType === "BUNDLE")
+  );
+  return {
+    isSubscribed: !!activeSub,
+    planName: activeSub?.productName || activeSub?.bundleName || "Free Explorer",
+    aiIncluded: !!activeSub,
+    callCost: activeSub ? 0 : 10,
+  };
+}
+
 export default function BillingPage() {
   const { wallet, transactions, isLoading: walletLoading, refresh: refetchWallet } = useCSWCredits();
   const { subscriptions } = useCSWSubscriptions();
   const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
+
+  const neuralAccess = resolveNeuralAccess(subscriptions);
 
   const stats = [
     { 
@@ -50,7 +71,7 @@ export default function BillingPage() {
     },
     { 
       label: "Active Plan", 
-      value: subscriptions?.[0]?.bundleName || subscriptions?.[0]?.productName || "Free", 
+      value: neuralAccess.planName,
       suffix: "",
       icon: ShieldCheck, 
       color: "text-purple-400",
@@ -83,6 +104,46 @@ export default function BillingPage() {
           </Button>
         </div>
       </div>
+
+      {/* AI Access Banner */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={`rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border ${
+          neuralAccess.aiIncluded
+            ? "bg-primary/10 border-primary/30"
+            : "bg-secondary/50 border-border"
+        }`}
+      >
+        <div className="flex items-center gap-4">
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+            neuralAccess.aiIncluded ? "bg-primary/20" : "bg-secondary"
+          }`}>
+            <Bot size={18} className={neuralAccess.aiIncluded ? "text-primary" : "text-muted-foreground"} />
+          </div>
+          <div>
+            <p className="text-sm font-bold">
+              {neuralAccess.aiIncluded
+                ? "AI calls are included in your plan — no points deducted"
+                : `Each AI call costs ${neuralAccess.callCost} pts from your balance`
+              }
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Plan: <span className="font-semibold text-foreground">{neuralAccess.planName}</span>
+              {!neuralAccess.aiIncluded && (
+                <> · Balance: <span className="font-semibold text-foreground">{wallet?.balance?.toLocaleString() ?? 0} pts</span></>
+              )}
+            </p>
+          </div>
+        </div>
+        {!neuralAccess.aiIncluded && (
+          <div className="flex gap-2 shrink-0">
+            <Button variant="neural" size="sm" onClick={() => setIsBuyModalOpen(true)}>
+              <Sparkles size={14} /> Buy Credits
+            </Button>
+          </div>
+        )}
+      </motion.div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { BookOpen, FileText, Upload, Trash2, ArrowLeft, Loader2, Search, CheckCircle2, AlertCircle, Database, Clock } from "lucide-react";
+import { BookOpen, FileText, Upload, Trash2, ArrowLeft, Loader2, Search, CheckCircle2, AlertCircle, Database, Clock, TestTube2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -20,9 +20,25 @@ export default function KBDetailPage() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
 
-  useEffect(() => {
-    if (id) loadData();
-  }, [id]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<Array<{ content: string; similarity: number; metadata: string }> | null>(null);
+  const [searching, setSearching] = useState(false);
+
+  const handleSearch = async () => {
+    if (!searchQuery.trim() || !id) return;
+    setSearching(true);
+    setSearchResults(null);
+    try {
+      const results = await neuralApi.kb.search(id as string, searchQuery.trim(), 5);
+      setSearchResults(results);
+    } catch (err: any) {
+      toast.error(`Search failed: ${err.message}`);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  useEffect(() => { if (id) loadData(); }, [id]);
 
   const loadData = async () => {
     try {
@@ -203,7 +219,57 @@ export default function KBDetailPage() {
         </div>
 
         <div className="space-y-6">
-          <Card className="bg-primary/5 border-primary/10 relative overflow-hidden">
+          {/* Search Test Panel */}
+        <Card className="bg-card/40 border-border/60">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs uppercase tracking-widest text-muted-foreground font-bold flex items-center gap-2">
+              <TestTube2 size={12} className="text-primary" /> RAG Search Test
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex gap-2">
+              <input
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleSearch()}
+                placeholder="Ask a question..."
+                className="flex-1 bg-secondary/50 border border-border rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50"
+              />
+              <button
+                onClick={handleSearch}
+                disabled={searching || !searchQuery.trim() || docs.length === 0}
+                className="px-3 py-2 rounded-lg bg-primary text-white text-xs font-bold disabled:opacity-50 hover:bg-primary/90 transition-colors flex items-center gap-1.5"
+              >
+                {searching ? <Loader2 size={12} className="animate-spin" /> : <Search size={12} />}
+                Test
+              </button>
+            </div>
+            {docs.length === 0 && (
+              <p className="text-[10px] text-muted-foreground italic">Upload documents first to test search.</p>
+            )}
+            {searchResults !== null && (
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {searchResults.length === 0 ? (
+                  <p className="text-[10px] text-muted-foreground">No results found.</p>
+                ) : searchResults.map((r, i) => (
+                  <div key={i} className="p-2.5 rounded-lg bg-secondary/40 border border-border/50 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Result {i + 1}</span>
+                      <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded ${
+                        r.similarity > 0.7 ? "bg-emerald-500/10 text-emerald-400" :
+                        r.similarity > 0.4 ? "bg-amber-500/10 text-amber-400" :
+                        "bg-red-500/10 text-red-400"
+                      }`}>{(r.similarity * 100).toFixed(1)}% match</span>
+                    </div>
+                    <p className="text-[10px] text-foreground/80 leading-relaxed line-clamp-3">{r.content}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="bg-primary/5 border-primary/10 relative overflow-hidden">
             <div className="absolute -right-4 -top-4 opacity-5">
                <Database size={100} />
             </div>

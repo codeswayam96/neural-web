@@ -13,9 +13,18 @@ import Link from "next/link";
 import { neuralApi, AnalyticsOverview, AppBreakdown, RecentRequest } from "@/lib/neural-api";
 import { useNeuralFetch, useNeuralEvents } from "@/lib/hooks";
 import { AnimatePresence, motion } from "framer-motion";
+import { useCSWSubscriptions, useCSWCredits } from "@codeswayam/auth";
 
 export default function DashboardPage() {
   const { events: liveEvents, connected } = useNeuralEvents();
+  const { subscriptions } = useCSWSubscriptions();
+  const { balance } = useCSWCredits();
+
+  const neuralSub = subscriptions.find(
+    (s) => s.status === "active" && (s.productSaasId?.includes("neural") || s.planType === "BUNDLE")
+  );
+  const aiIncluded = !!neuralSub;
+  const planName = neuralSub?.productName || neuralSub?.bundleName || "Free Explorer";
   const { data: overview, loading: ovLoading, refetch: refetchOv } = useNeuralFetch(
     () => neuralApi.analytics.overview()
   );
@@ -61,6 +70,19 @@ export default function DashboardPage() {
             <Link href="/api-keys"><Key size={13} /><span className="hidden sm:inline ml-1">Issue API Key</span></Link>
           </Button>
         </div>
+      </div>
+
+      {/* AI Status pill */}
+      <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold border ${
+        aiIncluded
+          ? "bg-primary/10 border-primary/30 text-primary"
+          : "bg-secondary border-border text-muted-foreground"
+      }`}>
+        <Bot size={12} />
+        {aiIncluded
+          ? `AI included · ${planName}`
+          : `AI costs 10 pts/call · Balance: ${balance.toLocaleString()} pts`
+        }
       </div>
 
       {/* KPI grid */}

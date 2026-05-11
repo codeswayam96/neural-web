@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import {
   Bot, Plus, Play, Settings, Search, RefreshCw, AlertCircle,
-  Trash2, X, Check, Loader2, ChevronDown, Brain, Database, Shield, Zap, Users,
+  Trash2, X, Check, Loader2, ChevronDown, Brain, Database, Shield, Zap, Users, Copy,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -245,10 +245,21 @@ export default function AgentsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editAgent, setEditAgent] = useState<Agent | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const { confirm, ConfirmDialogNode } = useConfirm();
 
   const { data: agents, loading, error, refetch } = useNeuralFetch(() => neuralApi.agents.list(search, 'chat'), [search]);
   const { data: stats, refetch: refetchStats } = useNeuralFetch(() => neuralApi.agents.stats());
+
+  const handleDuplicate = async (agent: Agent) => {
+    setDuplicatingId(agent.id);
+    try {
+      await neuralApi.agents.duplicate(agent.id);
+      toast.success(`"${agent.name}" duplicated`);
+      refetch(); refetchStats();
+    } catch (err: any) { toast.error(err.message || "Failed to duplicate"); }
+    finally { setDuplicatingId(null); }
+  };
 
   const handleDelete = async (agent: Agent) => {
     const ok = await confirm({
@@ -346,18 +357,45 @@ export default function AgentsPage() {
               </Button>
             </div>
           ) : (agents ?? []).map((agent) => (
-            <Card key={agent.id} className="hover:shadow-md transition-all">
+            <Card key={agent.id} className={`hover:shadow-md transition-all ${
+              agent.managedByApp ? 'border-amber-500/20 bg-amber-500/5' : ''
+            }`}>
               <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                 <div className="flex items-center gap-2">
-                  <Bot size={18} className="text-primary" />
+                  <Bot size={18} className={agent.managedByApp ? 'text-amber-400' : 'text-primary'} />
                   <CardTitle className="text-base font-bold">{agent.name}</CardTitle>
                 </div>
-                <Badge variant={agent.status === "active" ? "default" : "secondary"}>
-                  {agent.status}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(agent.id); toast.success(`Agent ID ${agent.id} copied`); }}
+                    className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-secondary border border-border text-[10px] font-mono text-muted-foreground hover:text-primary hover:border-primary/30 transition-colors"
+                    title="Copy Agent ID for NEURAL_AGENT_ID env var"
+                  >
+                    <Copy size={9} /> ID: {agent.id}
+                  </button>
+                  <Badge variant={agent.status === "active" ? "default" : "secondary"}>
+                    {agent.status}
+                  </Badge>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
+                  {/* Managed by app banner */}
+                  {agent.managedByApp && (
+                    <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                      <div className="w-5 h-5 rounded-md bg-amber-500/20 flex items-center justify-center shrink-0">
+                        <Zap size={11} className="text-amber-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-bold text-amber-400">
+                          Managed by {agent.managedByApp.charAt(0).toUpperCase() + agent.managedByApp.slice(1)}
+                        </p>
+                        <p className="text-[10px] text-amber-400/70">
+                          Configure this agent inside {agent.managedByApp}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                   <div className="flex flex-wrap gap-2 mt-1">
                     <Badge variant="outline" className="text-xs bg-secondary/50">
                       {agent.app}
@@ -367,20 +405,40 @@ export default function AgentsPage() {
                     </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground line-clamp-2 min-h-[40px]">
-                    {agent.description || "No description provided."}
+                    {agent.description || agent.systemPrompt?.slice(0, 80) || "No description provided."}
                   </p>
                   <div className="flex gap-2 pt-2">
-                    <Button variant="outline" size="sm" className="flex-1" onClick={() => setEditAgent(agent)}>
-                      <Settings size={14} className="mr-2" /> Configure
-                    </Button>
-                    <Button variant="outline" size="sm" className="flex-1" asChild>
-                      <Link href={`/agents/${agent.id}/playground`}>
-                        <Play size={14} className="mr-2" /> Playground
-                      </Link>
-                    </Button>
-                    <Button variant="outline" size="sm" className="px-3 hover:bg-destructive hover:text-destructive-foreground" onClick={() => handleDelete(agent)} disabled={deletingId === agent.id}>
-                      {deletingId === agent.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                    </Button>
+                    {agent.managedByApp ? (
+                      // Read-only view for managed agents
+                      <>
+                        <Button variant="outline" size="sm" className="flex-1 opacity-50 cursor-not-allowed" disabled>
+                          <Settings size={14} className="mr-2" /> Managed
+                        </Button>
+                        <Button variant="outline" size="sm" className="flex-1" asChild>
+                          <Link href={`/agents/${agent.id}/playground`}>
+                            <Play size={14} className="mr-2" /> Test
+                          </Link>
+                        </Button>
+                      </>
+                    ) : (
+                      // Full controls for user-owned agents
+                      <>
+                        <Button variant="outline" size="sm" className="flex-1" onClick={() => setEditAgent(agent)}>
+                          <Settings size={14} className="mr-2" /> Configure
+                        </Button>
+                        <Button variant="outline" size="sm" className="flex-1" asChild>
+                          <Link href={`/agents/${agent.id}/playground`}>
+                            <Play size={14} className="mr-2" /> Playground
+                          </Link>
+                        </Button>
+                        <Button variant="outline" size="sm" className="px-3" title="Duplicate" onClick={() => handleDuplicate(agent)} disabled={duplicatingId === agent.id}>
+                          {duplicatingId === agent.id ? <Loader2 size={14} className="animate-spin" /> : <Copy size={14} />}
+                        </Button>
+                        <Button variant="outline" size="sm" className="px-3 hover:bg-destructive hover:text-destructive-foreground" onClick={() => handleDelete(agent)} disabled={deletingId === agent.id}>
+                          {deletingId === agent.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
               </CardContent>

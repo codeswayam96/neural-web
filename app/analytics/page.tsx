@@ -1,6 +1,7 @@
 "use client";
 
-import { BarChart3, Activity, DollarSign, Clock, Bot, AlertCircle, RefreshCw } from "lucide-react";
+import { useState } from "react";
+import { BarChart3, Activity, DollarSign, Clock, Bot, AlertCircle, RefreshCw, Download, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,10 +9,29 @@ import { neuralApi } from "@/lib/neural-api";
 import { useNeuralFetch } from "@/lib/hooks";
 
 export default function AnalyticsPage() {
+  const [exporting, setExporting] = useState(false);
   const { data: overview, loading: ovLoading, error, refetch } = useNeuralFetch(() => neuralApi.analytics.overview());
   const { data: timeline, loading: tlLoading } = useNeuralFetch(() => neuralApi.analytics.timeline());
   const { data: modelUsage, loading: muLoading } = useNeuralFetch(() => neuralApi.analytics.modelUsage());
   const { data: recentRequests, loading: rrLoading } = useNeuralFetch(() => neuralApi.analytics.recentRequests());
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const { csv } = await neuralApi.analytics.export();
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `neural-analytics-${Date.now()}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // silent fail — export is non-critical
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const loading = ovLoading || tlLoading;
   const maxBar = timeline ? Math.max(...timeline.map((t) => t.requests), 1) : 1;
@@ -23,9 +43,15 @@ export default function AnalyticsPage() {
           <h2 className="text-xl font-bold">Analytics</h2>
           <p className="text-sm text-muted-foreground mt-0.5 hidden sm:block">Tokens, cost, latency, and guardrail metrics across all apps and agents.</p>
         </div>
-        <Button variant="outline" size="sm" onClick={refetch} className="shrink-0">
-          <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
-        </Button>
+        <div className="flex gap-2 shrink-0">
+          <Button variant="outline" size="sm" onClick={handleExport} disabled={exporting}>
+            {exporting ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+            <span className="hidden sm:inline">Export CSV</span>
+          </Button>
+          <Button variant="outline" size="sm" onClick={refetch}>
+            <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
+          </Button>
+        </div>
       </div>
 
       {error && (

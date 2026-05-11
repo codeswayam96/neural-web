@@ -16,6 +16,7 @@ import {
   Trash2,
   Key as KeyIcon,
   Loader2,
+  Check,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -92,6 +93,8 @@ export default function ModelsPage() {
     pointsPerRequest: 0,
     monthlyTokenLimitPerUser: 0,
     tier: "free" as any,
+    visibility: "public" as "public" | "platform-private",
+    restrictedToApps: [] as string[],
     supportsImageGeneration: false,
     supportsChat: true,
     supportsEmbedding: false,
@@ -168,6 +171,8 @@ export default function ModelsPage() {
         pointsPerRequest: 0,
         monthlyTokenLimitPerUser: 0,
         tier: "free",
+        visibility: "public",
+        restrictedToApps: [],
         supportsImageGeneration: false,
         supportsChat: true,
         supportsEmbedding: false,
@@ -179,6 +184,23 @@ export default function ModelsPage() {
       setIsSaving(false);
     }
   };
+
+  const PLATFORM_APPS = [
+    { value: "auraflow", label: "Auraflow" },
+    { value: "admin-panel", label: "Admin Panel" },
+    { value: "ems-frontend", label: "EMS" },
+    { value: "neural-web", label: "NeuralHub" },
+    { value: "codeswayam-web", label: "CSW Web" },
+    { value: "codeswayam-auth", label: "Auth" },
+  ];
+
+  const toggleApp = (app: string) =>
+    setNewModel(m => ({
+      ...m,
+      restrictedToApps: m.restrictedToApps.includes(app)
+        ? m.restrictedToApps.filter(a => a !== app)
+        : [...m.restrictedToApps, app],
+    }));
 
   const handleDeleteModel = async (id: number) => {
     const ok = await confirm({
@@ -366,6 +388,46 @@ export default function ModelsPage() {
                       <div className="grid gap-2">
                         <Label>Monthly Limit (Tokens)</Label>
                         <Input type="number" placeholder="0 for unlimited" value={newModel.monthlyTokenLimitPerUser} onChange={e => setNewModel({...newModel, monthlyTokenLimitPerUser: parseInt(e.target.value) || 0})} />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Visibility — public vs platform-private */}
+                  <div className="grid gap-2">
+                    <Label>Access</Label>
+                    <div className="flex gap-2">
+                      {(["public", "platform-private"] as const).map(v => (
+                        <button key={v} type="button"
+                          onClick={() => setNewModel({ ...newModel, visibility: v, restrictedToApps: v === 'public' ? [] : newModel.restrictedToApps })}
+                          className={`flex-1 px-3 py-2 rounded-xl text-xs border transition-all font-medium ${
+                            newModel.visibility === v
+                              ? 'bg-primary/15 border-primary/40 text-primary'
+                              : 'border-border text-muted-foreground hover:border-primary/30'
+                          }`}>
+                          {v === 'public' ? '🌐 Public (all users)' : '🔒 Platform Private'}
+                        </button>
+                      ))}
+                    </div>
+                    {newModel.visibility === 'platform-private' && (
+                      <div className="space-y-1.5">
+                        <div className="flex flex-wrap gap-2">
+                          {PLATFORM_APPS.map(app => {
+                            const active = newModel.restrictedToApps.includes(app.value);
+                            return (
+                              <button key={app.value} type="button" onClick={() => toggleApp(app.value)}
+                                className={`px-3 py-1.5 rounded-lg text-xs border transition-all font-medium ${
+                                  active ? 'bg-primary/15 border-primary/40 text-primary' : 'border-border text-muted-foreground hover:border-primary/30'
+                                }`}>
+                                {active && <Check size={9} className="inline mr-1" />}{app.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {newModel.restrictedToApps.length > 0 && (
+                          <p className="text-[10px] text-amber-400">
+                            Only platform keys for: {newModel.restrictedToApps.join(', ')}
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>
@@ -678,6 +740,13 @@ function ModelCard({
               <div className="flex items-center gap-2">
                 <CardTitle className="text-sm font-bold">{model.name}</CardTitle>
                 {model.tier === 'premium' && <ShieldCheck size={12} className="text-amber-500" />}
+                {(model as any).visibility === 'platform-private' && (
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-1">
+                    🔒 {Array.isArray((model as any).restrictedToApps) && (model as any).restrictedToApps.length > 0
+                      ? (model as any).restrictedToApps.join(', ')
+                      : (model as any).restrictedToApp || 'private'}
+                  </span>
+                )}
               </div>
               <p className={cn("text-[10px] mt-0.5 font-mono uppercase tracking-wider", PROVIDER_COLORS[model.provider.toLowerCase()] ?? "text-muted-foreground")}>
                 {model.provider} · {model.modelId}

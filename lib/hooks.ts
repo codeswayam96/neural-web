@@ -49,3 +49,4 @@ export function useNeuralFetch<T>(
 }
 
 export { useNeuralEvents } from "./hooks/use-events";
+export { useNeuralAgent } from "./hooks/use-neural-agent";

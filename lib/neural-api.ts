@@ -4,7 +4,6 @@
  */
 
 const DIRECT_BASE = process.env.NEXT_PUBLIC_NEURAL_API_URL || 'http://localhost:3006';
-// On the client, route through the Next.js proxy so the server can attach the HttpOnly cookie.
 const BASE = typeof window === 'undefined' ? DIRECT_BASE : '/api/neural';
 
 async function fetcher<T>(path: string, options?: RequestInit): Promise<T> {
@@ -14,7 +13,6 @@ async function fetcher<T>(path: string, options?: RequestInit): Promise<T> {
     headers.set('Content-Type', 'application/json');
   }
 
-  // SSR: read the HttpOnly cookie server-side and forward as Bearer token
   if (typeof window === 'undefined') {
     try {
       const { cookies } = await import('next/headers');
@@ -32,7 +30,6 @@ async function fetcher<T>(path: string, options?: RequestInit): Promise<T> {
     cache: 'no-store',
     ...restOptions,
     headers,
-    // credentials only needed for direct calls (SSR); proxy handles auth via Bearer
     credentials: typeof window === 'undefined' ? 'include' : 'same-origin',
   });
 
@@ -64,6 +61,8 @@ export interface Agent {
   piiMasking: boolean;
   knowledgeBaseId?: number;
   embeddingModel?: string;
+  /** Set when a platform SaaS auto-created this agent. Disables editing in neural-web. */
+  managedByApp?: string | null;
   createdAt: string;
 }
 
@@ -178,6 +177,11 @@ export interface ApiKey {
   allowedIps?: string[];
   allowedDomains?: string[];
   status: 'active' | 'revoked';
+  /**
+   * 'platform' = your internal SaaS products (auraflow, admin-panel, codeswayam-web)
+   * 'user'     = external users' own projects using NeuralHub as a product
+   */
+  scope: 'platform' | 'user';
   createdAt: string;
   lastUsed: string;
 }
@@ -189,6 +193,11 @@ export interface CreateApiKeyPayload {
   rateLimit?: number;
   allowedIps?: string[];
   allowedDomains?: string[];
+  /**
+   * 'platform' = your internal SaaS products (auraflow, admin-panel, codeswayam-web)
+   * 'user'     = external users' own projects (default)
+   */
+  scope?: 'platform' | 'user';
 }
 
 export interface CreatedApiKey extends ApiKey {
@@ -243,11 +252,11 @@ export interface KnowledgeBase {
   id: string;
   name: string;
   description: string;
-  embeddingModel?: string;        // Legacy string field (kept for backward compat)
-  embeddingModelId?: number;      // FK to neural.models
-  embeddingModelName?: string;    // Cached model ID string e.g. 'text-embedding-004'
-  embeddingProviderSlug?: string; // Cached provider e.g. 'google'
-  embeddingDimension?: number;    // e.g. 768, 1536
+  embeddingModel?: string;
+  embeddingModelId?: number;
+  embeddingModelName?: string;
+  embeddingProviderSlug?: string;
+  embeddingDimension?: number;
   userId: string;
   createdAt: string;
   updatedAt: string;
@@ -262,8 +271,6 @@ export interface KBDocument {
   content: string;
   createdAt: string;
 }
-
-// ── API Methods ───────────────────────────────────────────────────────
 
 export interface Workflow {
   id: string;
@@ -289,7 +296,7 @@ export interface WorkflowExecution {
   createdAt: string;
 }
 
-// ── API Methods ───────────────────────────────────────────────────────
+// ── API Methods ────────────────────────────────────────────────────────
 
 export const neuralApi = {
   agents: {
@@ -300,26 +307,16 @@ export const neuralApi = {
       const query = params.toString();
       return fetcher<Agent[]>(`/agents${query ? `?${query}` : ''}`);
     },
-
     stats: () => fetcher<AgentStats>('/agents/stats'),
-
     get: (id: string) => fetcher<Agent>(`/agents/${id}`),
-
     create: (payload: CreateAgentPayload) =>
-      fetcher<Agent>('/agents', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      }),
-
+      fetcher<Agent>('/agents', { method: 'POST', body: JSON.stringify(payload) }),
     update: (id: string, payload: Partial<CreateAgentPayload> & { status?: 'active' | 'inactive'; knowledgeBaseId?: number }) =>
-      fetcher<Agent>(`/agents/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(payload),
-      }),
-
+      fetcher<Agent>(`/agents/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
     delete: (id: string) =>
       fetcher<{ deleted: boolean }>(`/agents/${id}`, { method: 'DELETE' }),
-
+    duplicate: (id: string) =>
+      fetcher<Agent>(`/agents/${id}/duplicate`, { method: 'POST' }),
     chat: (id: string, message: string, sessionId?: string) =>
       fetcher<ChatMessage>(`/agents/${id}/chat`, {
         method: 'POST',
@@ -331,88 +328,69 @@ export const neuralApi = {
     list: () => fetcher<KnowledgeBase[]>('/kb'),
     get: (id: string) => fetcher<KnowledgeBase>(`/kb/${id}`),
     create: (payload: { name: string; description?: string; embeddingModelId?: number }) =>
-      fetcher<KnowledgeBase>('/kb', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      }),
+      fetcher<KnowledgeBase>('/kb', { method: 'POST', body: JSON.stringify(payload) }),
     update: (id: string, payload: { name?: string; description?: string }) =>
-      fetcher<KnowledgeBase>(`/kb/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(payload),
-      }),
+      fetcher<KnowledgeBase>(`/kb/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
     delete: (id: string) => fetcher<{ success: boolean }>(`/kb/${id}`, { method: 'DELETE' }),
-
     getDocuments: (id: string) => fetcher<KBDocument[]>(`/kb/${id}/documents`),
     uploadDocument: (id: string, file: File) => {
       const formData = new FormData();
       formData.append('file', file);
-      return fetcher<any>(`/kb/${id}/documents`, {
-        method: 'POST',
-        body: formData,
-        headers: {}, // Fetcher will handle the rest, browser will set Content-Type with boundary
-      });
+      return fetcher<any>(`/kb/${id}/documents`, { method: 'POST', body: formData, headers: {} });
     },
     deleteDocument: (id: string, docId: string) =>
       fetcher<{ success: boolean }>(`/kb/${id}/documents/${docId}`, { method: 'DELETE' }),
-    },
+    search: (id: string, query: string, topK = 5) =>
+      fetcher<Array<{ content: string; similarity: number; metadata: string }>>(`/kb/${id}/search`, {
+        method: 'POST',
+        body: JSON.stringify({ query, topK }),
+      }),
+  },
 
   workflows: {
     list: () => fetcher<Workflow[]>('/workflows'),
     get: (id: string) => fetcher<Workflow>(`/workflows/${id}`),
-    update: (id: string, payload: Partial<{ name: string; appName: string; description: string; status: 'draft' | 'active' | 'archived'; config: any; envs: any[] }>) =>
-      fetcher<Workflow>(`/workflows/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(payload),
-      }),
     create: (payload: { name: string; appName: string; description?: string }) =>
-      fetcher<Workflow>('/workflows', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      }),
+      fetcher<Workflow>('/workflows', { method: 'POST', body: JSON.stringify(payload) }),
+    update: (id: string, payload: Partial<{ name: string; appName: string; description: string; status: 'draft' | 'active' | 'archived'; config: any; envs: any[] }>) =>
+      fetcher<Workflow>(`/workflows/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
     updateStructure: (id: string, nodes: any[], edges: any[]) =>
-      fetcher<Workflow>(`/workflows/${id}/structure`, {
-        method: 'PUT',
-        body: JSON.stringify({ nodes, edges }),
-      }),
+      fetcher<Workflow>(`/workflows/${id}/structure`, { method: 'PUT', body: JSON.stringify({ nodes, edges }) }),
     execute: (id: string, input: any) =>
-      fetcher<any>(`/workflows/${id}/execute`, {
-        method: 'POST',
-        body: JSON.stringify(input),
-      }),
+      fetcher<any>(`/workflows/${id}/execute`, { method: 'POST', body: JSON.stringify(input) }),
     getExecutions: (id: string) => fetcher<WorkflowExecution[]>(`/workflows/${id}/executions`),
-    executions: (id: string) => fetcher<WorkflowExecution[]>(`/workflows/${id}/executions`), // alias
+    executions: (id: string) => fetcher<WorkflowExecution[]>(`/workflows/${id}/executions`),
     delete: (id: string) => fetcher<{ deleted: boolean }>(`/workflows/${id}`, { method: 'DELETE' }),
   },
 
   models: {
-    list: (capability?: 'chat' | 'image' | 'embedding') => fetcher<ModelRegistryResponse>(`/models${capability ? `?capability=${capability}` : ''}`),
+    list: (capability?: 'chat' | 'image' | 'embedding') =>
+      fetcher<ModelRegistryResponse>(`/models${capability ? `?capability=${capability}` : ''}`),
     get: (id: number) => fetcher<ModelProvider>(`/models/${id}`),
     stats: () => fetcher<{ totalModels: number; activeModels: number; platformModels: number; userModels: number; totalRequestsToday: number }>('/models/stats/overview'),
-    fetchProviderModels: (provider: string, apiKey: string, baseUrl?: string) => 
-      fetcher<{ id: string; name: string; capabilities: { chat: boolean; embedding: boolean; image: boolean } }[]>('/models/provider-models', { method: 'POST', body: JSON.stringify({ provider, apiKey, baseUrl }) }),
-
-    // Admin: Create platform model
+    fetchProviderModels: (provider: string, apiKey: string, baseUrl?: string) =>
+      fetcher<{ id: string; name: string; capabilities: { chat: boolean; embedding: boolean; image: boolean } }[]>('/models/provider-models', {
+        method: 'POST', body: JSON.stringify({ provider, apiKey, baseUrl }),
+      }),
     createPlatform: (payload: CreateModelPayload) =>
       fetcher<ModelProvider>('/models/platform', { method: 'POST', body: JSON.stringify(payload) }),
-
-    // Admin: Key pool management
     addKey: (modelId: number, payload: { apiKey: string; label?: string; weight?: number }) =>
       fetcher<ModelKey>(`/models/platform/${modelId}/keys`, { method: 'POST', body: JSON.stringify(payload) }),
     listKeys: (modelId: number) => fetcher<ModelKey[]>(`/models/platform/${modelId}/keys`),
-    updateKeyStatus: (keyId: number, status: 'active' | 'revoked') => fetcher<{ success: boolean }>(`/models/platform/keys/${keyId}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
-    deleteKey: (keyId: number) => fetcher<{ deleted: boolean }>(`/models/platform/keys/${keyId}`, { method: 'DELETE' }),
-
-    // User BYOK
+    updateKeyStatus: (keyId: number, status: 'active' | 'revoked') =>
+      fetcher<{ success: boolean }>(`/models/platform/keys/${keyId}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+    deleteKey: (keyId: number) =>
+      fetcher<{ deleted: boolean }>(`/models/platform/keys/${keyId}`, { method: 'DELETE' }),
     createByok: (payload: CreateModelPayload) =>
       fetcher<ModelProvider>('/models/byok', { method: 'POST', body: JSON.stringify(payload) }),
-
-    // Shared
     update: (id: number, payload: Partial<CreateModelPayload> & { status?: string }) =>
       fetcher<ModelProvider>(`/models/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
     delete: (id: number) => fetcher<{ deleted: boolean }>(`/models/${id}`, { method: 'DELETE' }),
-    testKey: (data: { provider: string, modelId: string, apiKey: string, baseUrl?: string }) => 
-      fetcher<{ success: boolean; message?: string; latency?: number; error?: string }>('/models/test-key', { method: 'POST', body: JSON.stringify(data) }),
-    testKeyById: (keyId: number) => 
+    testKey: (data: { provider: string; modelId: string; apiKey: string; baseUrl?: string }) =>
+      fetcher<{ success: boolean; message?: string; latency?: number; error?: string }>('/models/test-key', {
+        method: 'POST', body: JSON.stringify(data),
+      }),
+    testKeyById: (keyId: number) =>
       fetcher<{ success: boolean; message?: string; latency?: number; error?: string }>(`/models/platform/keys/${keyId}/test`, { method: 'POST' }),
   },
 
@@ -420,16 +398,10 @@ export const neuralApi = {
     list: () => fetcher<ApiKey[]>('/api-keys'),
     stats: () => fetcher<{ total: number; active: number; totalRequestsToday: number }>('/api-keys/stats'),
     get: (id: string) => fetcher<ApiKey>(`/api-keys/${id}`),
-
     create: (payload: CreateApiKeyPayload) =>
-      fetcher<CreatedApiKey>('/api-keys', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      }),
-
+      fetcher<CreatedApiKey>('/api-keys', { method: 'POST', body: JSON.stringify(payload) }),
     revoke: (id: string) =>
       fetcher<ApiKey>(`/api-keys/${id}/revoke`, { method: 'POST' }),
-
     delete: (id: string) =>
       fetcher<{ success: boolean }>(`/api-keys/${id}`, { method: 'DELETE' }),
   },
@@ -440,29 +412,31 @@ export const neuralApi = {
     apps: () => fetcher<AppBreakdown[]>('/analytics/apps'),
     recentRequests: () => fetcher<RecentRequest[]>('/analytics/recent-requests'),
     modelUsage: () => fetcher<ModelUsage[]>('/analytics/model-usage'),
+    export: () => fetcher<{ csv: string }>('/analytics/export'),
   },
 
   admin: {
     stats: () => fetcher<any>('/admin/stats'),
-    // Domains
     domains: () => fetcher<any[]>('/admin/domains'),
-    addDomain: (domain: string, appName?: string) => fetcher<any>('/admin/domains', { method: 'POST', body: JSON.stringify({ domain, appName }) }),
-    toggleDomain: (id: number, isActive: boolean) => fetcher<any>(`/admin/domains/${id}`, { method: 'PATCH', body: JSON.stringify({ isActive }) }),
-    deleteDomain: (id: number) => fetcher<any>(`/admin/domains/${id}`, { method: 'DELETE' }),
-    // Agents
+    addDomain: (domain: string, appName?: string) =>
+      fetcher<any>('/admin/domains', { method: 'POST', body: JSON.stringify({ domain, appName }) }),
+    toggleDomain: (id: number, isActive: boolean) =>
+      fetcher<any>(`/admin/domains/${id}`, { method: 'PATCH', body: JSON.stringify({ isActive }) }),
+    deleteDomain: (id: number) =>
+      fetcher<any>(`/admin/domains/${id}`, { method: 'DELETE' }),
     allAgents: () => fetcher<any[]>('/admin/agents'),
-    updateAgent: (id: number, dto: any) => fetcher<any>(`/admin/agents/${id}`, { method: 'PUT', body: JSON.stringify(dto) }),
-    deleteAgent: (id: number) => fetcher<any>(`/admin/agents/${id}`, { method: 'DELETE' }),
-    // Models
+    updateAgent: (id: number, dto: any) =>
+      fetcher<any>(`/admin/agents/${id}`, { method: 'PUT', body: JSON.stringify(dto) }),
+    deleteAgent: (id: number) =>
+      fetcher<any>(`/admin/agents/${id}`, { method: 'DELETE' }),
     allModels: () => fetcher<any[]>('/admin/models'),
-    toggleModelStatus: (id: number, status: string) => fetcher<any>(`/admin/models/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
-    // Workflows
+    toggleModelStatus: (id: number, status: string) =>
+      fetcher<any>(`/admin/models/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
     allWorkflows: () => fetcher<any[]>('/admin/workflows'),
-    // Logs
     logs: (limit?: number) => fetcher<any[]>(`/admin/logs${limit ? `?limit=${limit}` : ''}`),
-    // Prompt config
     getPromptConfig: () => fetcher<any>('/admin/prompt-config').catch(() => null),
-    upsertPromptConfig: (model: string, systemPrompt: string) => fetcher<any>('/admin/prompt-config', { method: 'PUT', body: JSON.stringify({ model, systemPrompt }) }),
+    upsertPromptConfig: (model: string, systemPrompt: string) =>
+      fetcher<any>('/admin/prompt-config', { method: 'PUT', body: JSON.stringify({ model, systemPrompt }) }),
   },
 
   gateway: {
@@ -471,8 +445,6 @@ export const neuralApi = {
         method: 'POST',
         body: JSON.stringify({ prompt, negativePrompt, modelId, agentId }),
       }),
-
-    /** Generate a workflow prompt using the platform's best available model. */
     generatePrompt: async (userIntent: string): Promise<string | null> => {
       try {
         const result = await fetcher<ChatMessage>('/v1/chat', {

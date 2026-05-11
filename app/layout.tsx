@@ -32,9 +32,9 @@ export const metadata: Metadata = {
 };
 
 import { ThemeProvider } from "@/components/theme-provider";
-import { CSWProvider } from "@codeswayam/auth";
 import { Analytics } from "@codeswayam/analytics";
 import { Toaster } from "sonner";
+import { Providers } from "@/components/providers";
 
 export default function RootLayout({
   children,
@@ -62,10 +62,7 @@ export default function RootLayout({
           metaPixelId={process.env.NEXT_PUBLIC_META_PIXEL_ID}
           appName="neural"
         />
-        <CSWProvider
-          apiUrl={process.env.NEXT_PUBLIC_API_URL}
-          authDomain={process.env.NEXT_PUBLIC_AUTH_URL}
-        >
+        <Providers>
           <ThemeProvider
             attribute="class"
             defaultTheme="dark"
@@ -75,7 +72,7 @@ export default function RootLayout({
             {children}
             <Toaster position="bottom-right" richColors />
           </ThemeProvider>
-        </CSWProvider>
+        </Providers>
       </body>
     </html>
   );
