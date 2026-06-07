@@ -2,52 +2,51 @@
 > neural-web@0.1.0 build
 > next build
 
-   ▲ Next.js 15.5.15
-   - Environments: .env.local, .env
+▲ Next.js 16.2.6 (Turbopack)
+- Environments: .env.local, .env
 
-   Creating an optimized production build ...
- ✓ Compiled successfully in 45s
-   Linting and checking validity of types ...
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+✓ Compiled successfully in 58s
+  Running TypeScript ...
+  Finished TypeScript in 51s ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/22) ...
+  Generating static pages using 7 workers (5/22) 
+  Generating static pages using 7 workers (10/22) 
+  Generating static pages using 7 workers (16/22) 
+✓ Generating static pages using 7 workers (22/22) in 9.9s
+  Finalizing page optimization ...
 
-./app/layout.tsx
-52:9  Warning: Custom fonts not added in `pages/_document.js` will only load for a single page. This is discouraged. See: https://nextjs.org/docs/messages/no-page-custom-font  @next/next/no-page-custom-font
-
-./lib/hooks.ts
-45:5  Warning: Unused eslint-disable directive (no problems were reported from 'react-hooks/exhaustive-deps').
-
-info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
-   Collecting page data ...
-   Generating static pages (0/15) ...
-   Generating static pages (3/15) 
-   Generating static pages (7/15) 
-   Generating static pages (11/15) 
- ✓ Generating static pages (15/15)
-   Finalizing page optimization ...
-   Collecting build traces ...
-
-Route (app)                                 Size  First Load JS
-┌ ○ /                                    10.8 kB         126 kB
-├ ○ /_not-found                             1 kB         103 kB
-├ ○ /agents                              8.87 kB         146 kB
-├ ƒ /agents/[id]/playground              49.4 kB         165 kB
-├ ○ /analytics                           5.64 kB         130 kB
-├ ○ /api-keys                            9.32 kB         143 kB
-├ ○ /billing                             10.4 kB         169 kB
-├ ○ /dashboard                           8.26 kB         172 kB
-├ ○ /image-generation                    8.73 kB         143 kB
-├ ○ /knowledge-base                      4.62 kB         145 kB
-├ ƒ /knowledge-base/[id]                 3.11 kB         131 kB
-├ ○ /models                              30.2 kB         179 kB
-├ ○ /settings                             4.9 kB         137 kB
-├ ○ /workflows                           9.21 kB         149 kB
-└ ƒ /workflows/[id]                      19.5 kB         193 kB
-+ First Load JS shared by all             102 kB
-  ├ chunks/1255-7acccb5f6afc5e0f.js      45.9 kB
-  ├ chunks/4bd1b696-f785427dddbba9fb.js  54.2 kB
-  └ other shared chunks (total)          2.01 kB
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /admin
+├ ○ /admin/agents
+├ ○ /admin/domains
+├ ○ /admin/logs
+├ ○ /admin/models
+├ ○ /admin/prompt-config
+├ ○ /admin/workflows
+├ ○ /agents
+├ ƒ /agents/[id]
+├ ƒ /agents/[id]/playground
+├ ○ /analytics
+├ ○ /api-keys
+├ ƒ /api/neural/[...path]
+├ ○ /auth/callback
+├ ○ /billing
+├ ○ /dashboard
+├ ○ /image-generation
+├ ○ /knowledge-base
+├ ƒ /knowledge-base/[id]
+├ ○ /models
+├ ○ /settings
+├ ○ /workflows
+└ ƒ /workflows/[id]
 
 
-ƒ Middleware                             34.6 kB
+ƒ Proxy (Middleware)
 
 ○  (Static)   prerendered as static content
 ƒ  (Dynamic)  server-rendered on demand

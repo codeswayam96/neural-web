@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { neuralApi } from "@/lib/neural-api";
-import { Cpu, RefreshCw, Loader2, CheckCircle, XCircle, Key, Settings } from "lucide-react";
+import { neuralApi, CreateModelPayload } from "@/lib/neural-api";
+import { Cpu, RefreshCw, Loader2, CheckCircle, XCircle, Key, Settings, Plus, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,9 +15,110 @@ const PROVIDER_COLORS: Record<string, string> = {
   groq: "text-orange-500", openrouter: "text-fuchsia-400", custom: "text-pink-400",
 };
 
+const PROVIDERS = ["google", "openai", "anthropic", "groq", "openrouter", "custom"];
+
+function AddModelModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+  const [form, setForm] = useState<CreateModelPayload>({
+    name: "", provider: "google", modelId: "", tier: "internal",
+    supportsChat: true, supportsEmbedding: false, supportsImageGeneration: false,
+    contextWindow: 8192, pointsPerRequest: 0,
+  });
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.name || !form.modelId) return;
+    setSaving(true);
+    try {
+      await neuralApi.models.createPlatform(form);
+      toast.success("Platform model created");
+      onSuccess();
+      onClose();
+    } catch (e: any) { toast.error(e.message); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative z-10 w-full max-w-lg bg-background rounded-2xl border border-border shadow-2xl overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-secondary/20">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center">
+              <Cpu size={15} className="text-primary" />
+            </div>
+            <div>
+              <h2 className="font-bold text-sm">Add Platform Model</h2>
+              <p className="text-[11px] text-muted-foreground">Register a new model in the platform registry</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-lg hover:bg-secondary flex items-center justify-center"><X size={14} /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[10px] font-bold uppercase text-muted-foreground block mb-1">Display Name *</label>
+              <input className={inp} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Gemini 2.0 Flash" required />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold uppercase text-muted-foreground block mb-1">Provider *</label>
+              <select className={inp} value={form.provider} onChange={e => setForm({ ...form, provider: e.target.value })}>
+                {PROVIDERS.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[10px] font-bold uppercase text-muted-foreground block mb-1">Model ID *</label>
+              <input className={`${inp} font-mono text-xs`} value={form.modelId} onChange={e => setForm({ ...form, modelId: e.target.value })} placeholder="gemini-2.0-flash" required />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold uppercase text-muted-foreground block mb-1">Tier</label>
+              <select className={inp} value={form.tier} onChange={e => setForm({ ...form, tier: e.target.value as any })}>
+                <option value="free">Free</option>
+                <option value="points">Points</option>
+                <option value="premium">Premium</option>
+                <option value="internal">Internal</option>
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[10px] font-bold uppercase text-muted-foreground block mb-1">Context Window</label>
+              <input className={inp} type="number" value={form.contextWindow} onChange={e => setForm({ ...form, contextWindow: +e.target.value })} />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold uppercase text-muted-foreground block mb-1">Points / Request</label>
+              <input className={inp} type="number" value={form.pointsPerRequest} onChange={e => setForm({ ...form, pointsPerRequest: +e.target.value })} />
+            </div>
+          </div>
+          <div>
+            <label className="text-[10px] font-bold uppercase text-muted-foreground block mb-1.5">Capabilities</label>
+            <div className="flex gap-3">
+              {(["supportsChat", "supportsEmbedding", "supportsImageGeneration"] as const).map(cap => (
+                <label key={cap} className="flex items-center gap-1.5 text-xs cursor-pointer">
+                  <input type="checkbox" checked={!!form[cap]} onChange={e => setForm({ ...form, [cap]: e.target.checked })} className="accent-primary" />
+                  {cap === "supportsChat" ? "Chat" : cap === "supportsEmbedding" ? "Embedding" : "Image Gen"}
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="flex gap-3 pt-1">
+            <Button type="button" variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
+            <Button type="submit" variant="neural" className="flex-1" disabled={saving}>
+              {saving ? <Loader2 size={13} className="animate-spin mr-1.5" /> : <Plus size={13} className="mr-1.5" />} Add Model
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminModelsPage() {
   const [models, setModels] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [addOpen, setAddOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<any>({});
   const [saving, setSaving] = useState(false);
@@ -75,14 +176,20 @@ export default function AdminModelsPage() {
 
   return (
     <div className="space-y-5 max-w-6xl">
+      {addOpen && <AddModelModal onClose={() => setAddOpen(false)} onSuccess={load} />}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold">Platform Models</h2>
           <p className="text-sm text-muted-foreground mt-0.5">{models.length} platform-managed models</p>
         </div>
-        <Button variant="outline" size="sm" onClick={load}>
-          <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={load}>
+            <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
+          </Button>
+          <Button variant="neural" size="sm" onClick={() => setAddOpen(true)}>
+            <Plus size={13} className="mr-1.5" /> Add Model
+          </Button>
+        </div>
       </div>
 
       {loading ? (

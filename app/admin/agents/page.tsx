@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { cn } from "@/lib/utils";
 
 const inp = "w-full bg-secondary/30 border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary transition-all";
 
@@ -19,15 +20,34 @@ export default function AdminAgentsPage() {
   const [editForm, setEditForm] = useState<any>({});
   const [saving, setSaving] = useState(false);
   const { confirm, ConfirmDialogNode } = useConfirm();
+  const [modelOptions, setModelOptions] = useState<any[]>([]);
 
   const load = async () => {
     setLoading(true);
-    try { setAgents(await neuralApi.admin.allAgents()); }
-    catch { toast.error("Failed to load agents"); }
+    try { 
+      const [allAgents, allModels] = await Promise.all([
+        neuralApi.admin.allAgents(),
+        neuralApi.models.list().catch(() => ({ platform: [], user: [] }))
+      ]);
+      setAgents(allAgents);
+      setModelOptions([...(allModels.platform || []), ...(allModels.user || [])]);
+    }
+    catch { toast.error("Failed to load platform data"); }
     finally { setLoading(false); }
   };
 
   useEffect(() => { load(); }, []);
+
+  const toggleAllowedModel = (modelId: string) => {
+    const currentList = editForm.allowedModels ? editForm.allowedModels.split(',').filter(Boolean) : [];
+    let newList;
+    if (currentList.includes(modelId)) {
+      newList = currentList.filter((x: string) => x !== modelId);
+    } else {
+      newList = [...currentList, modelId];
+    }
+    setEditForm({ ...editForm, allowedModels: newList.join(',') });
+  };
 
   const handleDelete = async (id: number, name: string) => {
     const ok = await confirm({ title: "Delete Agent", description: `Delete "${name}"? Cannot be undone.`, confirmLabel: "Delete", destructive: true });
@@ -103,6 +123,34 @@ export default function AdminAgentsPage() {
                     <label className="text-[10px] font-bold uppercase text-muted-foreground block mb-1">Description</label>
                     <input className={inp} value={editForm.description || ""} onChange={e => setEditForm({ ...editForm, description: e.target.value })} />
                   </div>
+                  <div>
+                    <label className="text-[10px] font-bold uppercase text-muted-foreground block mb-1.5">Approved Models for Platform (BYOK/Platform)</label>
+                    <div className="flex flex-wrap gap-2 p-3 rounded-lg border border-border bg-secondary/25">
+                      {modelOptions.length === 0 ? (
+                        <span className="text-[10px] text-muted-foreground italic">No custom models registered in the registry</span>
+                      ) : (
+                        modelOptions.map(m => {
+                          const isAllowed = (editForm.allowedModels || "").split(",").filter(Boolean).includes(m.modelId) || (editForm.allowedModels || "").split(",").filter(Boolean).includes(String(m.id));
+                          return (
+                            <button
+                              type="button"
+                              key={m.id}
+                              onClick={() => toggleAllowedModel(m.modelId)}
+                              className={cn(
+                                "px-2 py-1 rounded text-[10px] border font-mono transition-all font-semibold",
+                                isAllowed
+                                  ? "bg-primary/10 border-primary/45 text-primary"
+                                  : "border-border text-muted-foreground hover:border-primary/20"
+                              )}
+                            >
+                              {isAllowed && "✓ "}{m.name} ({m.provider})
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                    <p className="text-[9px] text-muted-foreground mt-1">Whitelist models users are allowed to switch to for this platform agent.</p>
+                  </div>
                   <div className="flex gap-2">
                     <Button size="sm" variant="neural" onClick={handleSaveEdit} disabled={saving}>
                       {saving && <Loader2 size={13} className="animate-spin mr-1" />} Save Changes
@@ -129,11 +177,16 @@ export default function AdminAgentsPage() {
                     </p>
                     <p className="text-[9px] text-muted-foreground/60 mt-0.5">
                       {agent.guardrailsEnabled ? "🛡 Guardrails ON" : "⚠ Guardrails OFF"} · {agent.totalRequests} requests · User #{agent.createdByUserId}
+                      {agent.allowedModels && (
+                        <span className="ml-2 text-primary font-semibold">
+                          · Approved: {agent.allowedModels.split(',').filter(Boolean).length} custom models
+                        </span>
+                      )}
                     </p>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
-                      onClick={() => { setEditId(agent.id); setEditForm({ name: agent.name, model: agent.model, systemPrompt: agent.systemPrompt, description: agent.description }); }}>
+                      onClick={() => { setEditId(agent.id); setEditForm({ name: agent.name, model: agent.model, systemPrompt: agent.systemPrompt, description: agent.description, allowedModels: agent.allowedModels }); }}>
                       <Settings size={13} />
                     </Button>
                     <Button variant="ghost" size="sm"

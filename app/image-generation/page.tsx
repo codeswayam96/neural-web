@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import {
   ImageIcon, Sparkles, Download, RefreshCw, Loader2, AlertCircle,
-  Plus, Settings, Trash2, X, Check, Bot, Search, ChevronDown, Play,
+  Plus, Settings, Trash2, X, Check, Bot, Search, ChevronDown, Play, Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +38,8 @@ function ImageAgentFormDialog({
     type: 'image',
   });
 
+  const [modelRegistry, setModelRegistry] = useState<{ platform: { value: string, label: string }[], user: { value: string, label: string }[], rawPlatform: any[] } | null>(null);
+
   useEffect(() => {
     if (open && editAgent) {
       setForm({
@@ -65,16 +67,51 @@ function ImageAgentFormDialog({
   useEffect(() => {
     if (open) {
       neuralApi.models.list('image').then(res => {
-        const platform = res.platform.map(m => ({ value: m.modelId, label: `${m.name} (${m.provider})` }));
-        const user = res.user.map(m => ({ value: m.modelId, label: `${m.name} (My BYOK)` }));
-        const all = [...platform, ...user];
-        setAvailableModels(all);
-        if (all.length > 0 && !form.model) {
-          setForm(f => ({ ...f, model: all[0].value }));
-        }
+        setModelRegistry({
+          platform: res.platform.map(m => ({ value: m.modelId, label: `${m.name} (${m.provider})` })),
+          user: res.user.map(m => ({ value: m.modelId, label: `${m.name} (My BYOK)` })),
+          rawPlatform: res.platform
+        });
       }).catch(() => {});
+    } else {
+      setModelRegistry(null);
     }
   }, [open]);
+
+  useEffect(() => {
+    if (!modelRegistry) return;
+
+    const isPlatformManaged = !!editAgent?.managedByApp || (form.appName && ['auraflow', 'admin-panel', 'codeswayam-web', 'ems-frontend', 'neural-web'].includes(form.appName.toLowerCase()));
+
+    const platform = modelRegistry.platform;
+    const user = modelRegistry.user;
+    const all = isPlatformManaged ? platform : [...platform, ...user];
+
+    setAvailableModels(all);
+
+    if (isPlatformManaged) {
+      const appName = (editAgent?.managedByApp || form.appName || "").toLowerCase();
+      const restrictedModel = modelRegistry.rawPlatform.find(
+        m => m.visibility === 'platform-private' && m.restrictedToApp?.toLowerCase() === appName
+      );
+
+      if (restrictedModel) {
+        if (form.model !== restrictedModel.modelId) {
+          setForm(f => ({ ...f, model: restrictedModel.modelId }));
+        }
+      } else {
+        const isValidPlatformModel = modelRegistry.rawPlatform.some(m => m.modelId === form.model);
+        if (!isValidPlatformModel && platform.length > 0) {
+          setForm(f => ({ ...f, model: platform[0].value }));
+        }
+      }
+    } else {
+      const isValidModel = all.some(m => m.value === form.model);
+      if (!isValidModel && all.length > 0) {
+        setForm(f => ({ ...f, model: all[0].value }));
+      }
+    }
+  }, [modelRegistry, form.appName, form.model, editAgent]);
 
   if (!open) return null;
 
@@ -143,20 +180,31 @@ function ImageAgentFormDialog({
 
           <div>
             <label className="text-xs text-muted-foreground mb-1.5 block">Image Model *</label>
-            <div className="relative">
-              <select
-                value={form.model}
-                onChange={(e) => setForm({ ...form, model: e.target.value })}
-                required
-                className="w-full px-3 py-2 text-sm bg-secondary border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/50 appearance-none cursor-pointer"
-              >
-                {availableModels.length === 0 && <option value="">No image models available...</option>}
-                {availableModels.map((m) => (
-                  <option key={`${m.value}-${m.label}`} value={m.value}>{m.label}</option>
-                ))}
-              </select>
-              <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-            </div>
+            {editAgent?.managedByApp ? (
+              <div className="w-full px-3 py-2 text-sm bg-secondary/50 border border-amber-500/30 rounded-lg flex items-center justify-between">
+                <span className="font-mono text-muted-foreground">
+                  {availableModels.find(m => m.value === form.model)?.label || form.model}
+                </span>
+                <span className="flex items-center gap-1 text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
+                  <Lock size={9} /> Platform-locked by {editAgent.managedByApp}
+                </span>
+              </div>
+            ) : (
+              <div className="relative">
+                <select
+                  value={form.model}
+                  onChange={(e) => setForm({ ...form, model: e.target.value })}
+                  required
+                  className="w-full px-3 py-2 text-sm bg-secondary border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/50 appearance-none cursor-pointer"
+                >
+                  {availableModels.length === 0 && <option value="">No image models available...</option>}
+                  {availableModels.map((m) => (
+                    <option key={`${m.value}-${m.label}`} value={m.value}>{m.label}</option>
+                  ))}
+                </select>
+                <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              </div>
+            )}
           </div>
 
           <div>

@@ -1,19 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BarChart3, Activity, DollarSign, Clock, Bot, AlertCircle, RefreshCw, Download, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { neuralApi } from "@/lib/neural-api";
 import { useNeuralFetch } from "@/lib/hooks";
+import { cn } from "@/lib/utils";
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, BarChart, Bar, Cell } from "recharts";
+import { TraceInspectorDrawer } from "@/components/trace-inspector-drawer";
 
 export default function AnalyticsPage() {
   const [exporting, setExporting] = useState(false);
-  const { data: overview, loading: ovLoading, error, refetch } = useNeuralFetch(() => neuralApi.analytics.overview());
-  const { data: timeline, loading: tlLoading } = useNeuralFetch(() => neuralApi.analytics.timeline());
-  const { data: modelUsage, loading: muLoading } = useNeuralFetch(() => neuralApi.analytics.modelUsage());
-  const { data: recentRequests, loading: rrLoading } = useNeuralFetch(() => neuralApi.analytics.recentRequests());
+  const [range, setRange] = useState<'1d' | '7d' | '30d'>('1d');
+  const [isMounted, setIsMounted] = useState(false);
+  const [selectedLog, setSelectedLog] = useState<any | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const { data: overview, loading: ovLoading, error, refetch } = useNeuralFetch(() => neuralApi.analytics.overview(), [range]);
+  const { data: timeline, loading: tlLoading } = useNeuralFetch(() => neuralApi.analytics.timeline(), [range]);
+  const { data: modelUsage, loading: muLoading } = useNeuralFetch(() => neuralApi.analytics.modelUsage(), [range]);
+  const { data: recentRequests, loading: rrLoading } = useNeuralFetch(() => neuralApi.analytics.recentRequests(), [range]);
 
   const handleExport = async () => {
     setExporting(true);
@@ -38,12 +50,26 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-6 max-w-6xl">
-      <div className="flex items-start sm:items-center justify-between gap-3">
+      <div className="flex items-start sm:items-center justify-between gap-3 flex-wrap">
         <div>
           <h2 className="text-xl font-bold">Analytics</h2>
           <p className="text-sm text-muted-foreground mt-0.5 hidden sm:block">Tokens, cost, latency, and guardrail metrics across all apps and agents.</p>
         </div>
-        <div className="flex gap-2 shrink-0">
+        <div className="flex items-center gap-2 flex-wrap shrink-0">
+          {/* Time range selector */}
+          <div className="flex items-center gap-1 p-1 bg-secondary rounded-xl border border-border">
+            {([['1d', 'Today'], ['7d', '7 Days'], ['30d', '30 Days']] as const).map(([val, label]) => (
+              <button
+                key={val}
+                onClick={() => setRange(val)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  range === val ? 'bg-background shadow-sm text-foreground border border-border' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <Button variant="outline" size="sm" onClick={handleExport} disabled={exporting}>
             {exporting ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
             <span className="hidden sm:inline">Export CSV</span>
@@ -93,34 +119,36 @@ export default function AnalyticsPage() {
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-sm">Requests per Hour (Today)</CardTitle>
-            <Badge variant="secondary" className="text-[10px]">Last 24h</Badge>
+            <CardTitle className="text-sm">Requests &amp; Token Ingress Volume</CardTitle>
+            <Badge variant="secondary" className="text-[10px]">Interactive Timeline</Badge>
           </div>
         </CardHeader>
         <CardContent>
-          {tlLoading ? (
-            <div className="h-32 bg-secondary/30 rounded animate-pulse" />
+          {tlLoading || !isMounted ? (
+            <div className="h-48 bg-secondary/20 border border-border/50 rounded-xl flex items-center justify-center animate-pulse text-xs text-muted-foreground">
+              Initializing Recharts interactive session...
+            </div>
           ) : (
-            <>
-              <div className="flex items-end gap-1 h-32">
-                {(timeline ?? []).map((point, i) => (
-                  <div key={i} className="flex-1 flex flex-col items-center gap-1 group relative">
-                    <div
-                      className="w-full rounded-sm bg-primary/50 group-hover:bg-primary transition-colors cursor-pointer"
-                      style={{ height: `${(point.requests / maxBar) * 100}%`, minHeight: "2px" }}
-                    />
-                    <div className="absolute bottom-full mb-1 hidden group-hover:block bg-card border border-border rounded px-2 py-1 text-[10px] whitespace-nowrap z-10">
-                      {point.hour}: {point.requests.toLocaleString()} reqs
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="flex justify-between mt-2">
-                <span className="text-[10px] text-muted-foreground">00:00</span>
-                <span className="text-[10px] text-muted-foreground">12:00</span>
-                <span className="text-[10px] text-muted-foreground">23:00</span>
-              </div>
-            </>
+            <div className="h-48 w-full mt-2 font-mono text-[10px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={timeline ?? []} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorRequests" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(263.4 70% 50.4%)" stopOpacity={0.4}/>
+                      <stop offset="95%" stopColor="hsl(263.4 70% 50.4%)" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                  <XAxis dataKey="hour" stroke="#888" tickLine={false} />
+                  <YAxis stroke="#888" tickLine={false} />
+                  <Tooltip
+                    contentStyle={{ background: "rgba(10, 10, 10, 0.95)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px" }}
+                    labelClassName="text-white font-bold"
+                  />
+                  <Area type="monotone" dataKey="requests" stroke="hsl(263.4 70% 50.4%)" strokeWidth={2} fillOpacity={1} fill="url(#colorRequests)" name="Requests" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -128,31 +156,45 @@ export default function AnalyticsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Model Usage Today</CardTitle>
-            <CardDescription className="text-xs">Share of total requests</CardDescription>
+            <CardTitle className="text-sm">Model Share Breakdown</CardTitle>
+            <CardDescription className="text-xs">Visualizing distribution across model providers</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3 max-h-[400px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
-            {muLoading ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="space-y-1 animate-pulse">
-                  <div className="h-3 w-32 bg-secondary rounded" />
-                  <div className="h-1.5 w-full bg-secondary rounded-full" />
+          <CardContent>
+            {muLoading || !isMounted ? (
+              <div className="h-56 bg-secondary/20 border border-border/50 rounded-xl flex items-center justify-center animate-pulse text-xs text-muted-foreground">
+                Calculating registry share...
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="h-36 w-full font-mono text-[10px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={modelUsage ?? []} layout="vertical" margin={{ top: 5, right: 5, left: -15, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                      <XAxis type="number" stroke="#888" tickLine={false} />
+                      <YAxis type="category" dataKey="model" stroke="#888" tickLine={false} width={80} />
+                      <Tooltip
+                        contentStyle={{ background: "rgba(10, 10, 10, 0.95)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px" }}
+                        labelClassName="text-white font-bold font-mono"
+                      />
+                      <Bar dataKey="pct" fill="hsl(263.4 70% 50.4%)" radius={[0, 4, 4, 0]} name="Percentage (%)">
+                        {(modelUsage ?? []).map((entry, index) => {
+                          const colors = ["#8b5cf6", "#ec4899", "#3b82f6", "#10b981", "#f59e0b"];
+                          return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
+                        })}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
-              ))
-            ) : (modelUsage ?? []).map((m) => (
-              <div key={m.model} className="space-y-1">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-mono">{m.model}</span>
-                  <span className="text-muted-foreground">{m.pct}%</span>
-                </div>
-                <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-primary to-fuchsia-500 transition-all duration-700"
-                    style={{ width: `${m.pct}%` }}
-                  />
+                <div className="space-y-2 max-h-[160px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
+                  {(modelUsage ?? []).map((m) => (
+                    <div key={m.model} className="flex items-center justify-between text-xs">
+                      <span className="font-mono truncate max-w-[200px]">{m.model}</span>
+                      <span className="text-muted-foreground font-bold">{m.pct}%</span>
+                    </div>
+                  ))}
                 </div>
               </div>
-            ))}
+            )}
           </CardContent>
         </Card>
 
@@ -174,8 +216,12 @@ export default function AnalyticsPage() {
             ) : (
               <div className="space-y-2">
                 {(recentRequests ?? []).map((r, i) => (
-                  <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/20 border border-border">
-                    <Bot size={11} className="text-primary shrink-0" />
+                  <div 
+                    key={i} 
+                    onClick={() => { setSelectedLog(r); setDrawerOpen(true); }}
+                    className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/20 border border-border hover:border-primary/30 hover:bg-muted/30 cursor-pointer transition-all group"
+                  >
+                    <Bot size={11} className="text-primary shrink-0 group-hover:scale-110 transition-transform" />
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-mono truncate">{r.app}/{r.agent}</p>
                       <p className="text-[10px] text-muted-foreground">{r.model} · {r.tokens} tkn · {r.latencyMs}ms</p>
@@ -188,6 +234,7 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
       </div>
+      <TraceInspectorDrawer log={selectedLog} open={drawerOpen} onClose={() => setDrawerOpen(false)} />
     </div>
   );
 }

@@ -15,14 +15,25 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
   const token = cookieStore.get('Authentication')?.value;
 
   const headers = new Headers();
-  headers.set('Content-Type', 'application/json');
+  const contentType = req.headers.get('content-type');
+  if (contentType) {
+    headers.set('Content-Type', contentType);
+  } else {
+    headers.set('Content-Type', 'application/json');
+  }
+
   if (token) headers.set('Authorization', `Bearer ${token}`);
 
   // Forward API key header for SDK-authenticated calls
   const apiKey = req.headers.get('x-api-key');
   if (apiKey) headers.set('x-api-key', apiKey);
 
-  const body = req.method !== 'GET' && req.method !== 'HEAD' ? await req.text() : undefined;
+  const body =
+    req.method !== 'GET' && req.method !== 'HEAD'
+      ? (contentType?.includes('multipart/form-data')
+          ? await req.arrayBuffer()
+          : await req.text())
+      : undefined;
 
   try {
     const res = await fetch(url, {

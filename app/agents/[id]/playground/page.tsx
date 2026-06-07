@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import {
   Bot, Send, RefreshCw, ArrowLeft, Loader2,
-  Clock, Hash, Shield, Zap, AlertCircle, X, ChevronDown,
+  Clock, Hash, Shield, Zap, AlertCircle, X, ChevronDown, Key as KeyIcon,
 } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -21,6 +21,7 @@ interface Message {
   tokensIn?: number;
   tokensOut?: number;
   model?: string;
+  keyPreview?: string | null;
 }
 
 export default function PlaygroundPage() {
@@ -35,8 +36,12 @@ export default function PlaygroundPage() {
   const [sending, setSending] = useState(false);
   const [sessionId] = useState(() => `session_${Date.now()}`);
   const [showSidebar, setShowSidebar] = useState(false);
+  const [modelDisplayName, setModelDisplayName] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Managed agent test limit — disabled in dashboard playground for owners
+  const managedLimitReached = false;
 
   useEffect(() => {
     neuralApi.agents.get(agentId)
@@ -45,12 +50,30 @@ export default function PlaygroundPage() {
       .finally(() => setAgentLoading(false));
   }, [agentId]);
 
+  // Resolve the ACTUAL underlying model (modelId slug, e.g. "gemini-2.5-flash")
+  // not the wrapper name (e.g. "self" / "auraflow platform modal")
+  useEffect(() => {
+    if (!agent?.model) return;
+    neuralApi.models.list('chat').then(res => {
+      const rawId = agent.model;
+      // Match by DB id first, then by modelId slug
+      const allModels = [...res.platform, ...res.user];
+      const match = allModels.find(m =>
+        String(m.id) === rawId || m.modelId === rawId
+      );
+      // Show the actual modelId (e.g. "gemini-2.5-flash"), not the wrapper name
+      setModelDisplayName(match ? match.modelId : rawId);
+    }).catch(() => {
+      setModelDisplayName(agent.model); // fallback to raw value
+    });
+  }, [agent]);
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, sending]);
 
   const sendMessage = async () => {
-    if (!input.trim() || sending) return;
+    if (!input.trim() || sending || managedLimitReached) return;
     const userText = input.trim();
     setInput("");
     setMessages((m) => [...m, { role: "user", text: userText }]);
@@ -67,6 +90,7 @@ export default function PlaygroundPage() {
           tokensIn: result.usage?.tokensIn,
           tokensOut: result.usage?.tokensOut,
           model: result.model,
+          keyPreview: result.keyPreview,
         },
       ]);
     } catch (err: any) {
@@ -146,10 +170,12 @@ export default function PlaygroundPage() {
             </Badge>
 
             <div className="space-y-2 pt-1 border-t border-border">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Model</span>
-                <span className="font-mono text-[10px]">{agent.model}</span>
-              </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Model</span>
+                  <span className="font-mono text-[10px] truncate max-w-[120px]" title={agent.model}>
+                    {modelDisplayName ?? agent.model}
+                  </span>
+                </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">Guardrails</span>
                 <span className={agent.guardrailsEnabled ? "text-emerald-400" : "text-muted-foreground"}>
@@ -210,6 +236,27 @@ export default function PlaygroundPage() {
                 <span className="font-medium">{s.value}</span>
               </div>
             ))}
+
+            {/* Active key used in last response */}
+            {(() => {
+              const lastAssistant = [...messages].reverse().find(m => m.role === "assistant" && m.keyPreview);
+              if (!lastAssistant?.keyPreview) return null;
+              const preview = lastAssistant.keyPreview;
+              // split at '...' to get start and end
+              const [start, end] = preview.includes('...') ? preview.split('...') : [preview.slice(0, 6), preview.slice(-4)];
+              return (
+                <div className="pt-2 mt-1 border-t border-border">
+                  <p className="text-[10px] text-muted-foreground mb-1.5 flex items-center gap-1">
+                    <KeyIcon size={9} /> Active Key
+                  </p>
+                  <div className="flex items-center gap-1 font-mono text-[10px] bg-secondary/60 border border-border rounded-md px-2 py-1.5">
+                    <span className="text-emerald-400">{start}</span>
+                    <span className="text-muted-foreground">•••</span>
+                    <span className="text-emerald-400">{end}</span>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -235,13 +282,40 @@ export default function PlaygroundPage() {
           </button>
           <div className="flex items-center gap-1.5 text-xs text-emerald-400">
             <span className="status-dot active" />
-            <span className="hidden sm:inline">Agent Playground</span>
+            <span className="hidden sm:inline">
+              {agent.managedByApp
+                ? `Managed by ${agent.managedByApp.charAt(0).toUpperCase() + agent.managedByApp.slice(1)} · Test Mode`
+                : "Agent Playground"}
+            </span>
             <span className="sm:hidden font-mono text-[10px]">{agent.name}</span>
           </div>
+          {agent.managedByApp && (
+            <span className="flex items-center gap-1 ml-2 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+              Unlimited Dashboard Testing
+            </span>
+          )}
           <span className="text-xs text-muted-foreground ml-auto font-mono">
             {sessionId.slice(-8)}
           </span>
         </div>
+
+        {/* Managed agent notice */}
+        {agent.managedByApp && (
+          <div className="flex items-center gap-3 px-4 py-2.5 bg-amber-500/5 border-b border-amber-500/20">
+            <AlertCircle size={13} className="text-amber-400 shrink-0" />
+            <p className="text-[11px] text-amber-400/80 flex-1">
+              This agent is <strong className="text-amber-400">managed by {agent.managedByApp.charAt(0).toUpperCase() + agent.managedByApp.slice(1)}</strong>.
+              As the workspace owner, you have unlimited playground testing here.
+            </p>
+            <a
+              href={`${process.env.NEXT_PUBLIC_AURAFLOW_URL || 'http://localhost:3004'}/automations`}
+              target="_blank" rel="noopener noreferrer"
+              className="shrink-0 text-[10px] font-bold text-amber-400 hover:underline flex items-center gap-1"
+            >
+              Open in {agent.managedByApp} <ArrowLeft size={9} className="rotate-180" />
+            </a>
+          </div>
+        )}
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -302,6 +376,17 @@ export default function PlaygroundPage() {
                           <span className="flex items-center gap-0.5"><Hash size={8} /> {(msg.tokensIn + (msg.tokensOut ?? 0))} tokens</span>
                         )}
                         {msg.model && <span className="font-mono">{msg.model}</span>}
+                        {msg.keyPreview && (() => {
+                          const [start, end] = msg.keyPreview.includes('...')
+                            ? msg.keyPreview.split('...')
+                            : [msg.keyPreview.slice(0, 6), msg.keyPreview.slice(-4)];
+                          return (
+                            <span className="flex items-center gap-0.5 font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded">
+                              <KeyIcon size={7} />
+                              {start}<span className="opacity-50">•••</span>{end}
+                            </span>
+                          );
+                        })()}
                       </div>
                     )}
                   </div>
@@ -351,7 +436,7 @@ export default function PlaygroundPage() {
             </Button>
           </div>
           <p className="text-[10px] text-muted-foreground mt-1.5 px-1">
-            AI responses are generated by {agent.model} and may contain errors. Verify important information.
+            AI responses are generated by <span className="font-medium">{modelDisplayName ?? agent.model}</span> and may contain errors. Verify important information.
           </p>
         </div>
       </div>

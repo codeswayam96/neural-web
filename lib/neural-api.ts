@@ -63,6 +63,7 @@ export interface Agent {
   embeddingModel?: string;
   /** Set when a platform SaaS auto-created this agent. Disables editing in neural-web. */
   managedByApp?: string | null;
+  allowedModels?: string | null;
   createdAt: string;
 }
 
@@ -94,6 +95,10 @@ export interface ChatMessage {
   usage: { tokensIn: number; tokensOut: number };
   latencyMs: number;
   model: string;
+  provider?: string;
+  usageType?: string;
+  /** Masked key preview e.g. 'sk-pro...a1b2' — which pool key served this request */
+  keyPreview?: string | null;
 }
 
 export interface ModelProvider {
@@ -103,7 +108,7 @@ export interface ModelProvider {
   modelId: string;
   description?: string;
   userId?: number | null;
-  visibility: 'public' | 'private';
+  visibility: 'public' | 'private' | 'platform-private';
   usageType: 'managed' | 'byok';
   tier: 'free' | 'points' | 'premium' | 'internal';
   status: 'active' | 'inactive';
@@ -125,6 +130,7 @@ export interface ModelProvider {
   keysCount: number;
   activeKeysCount: number;
   baseUrl?: string;
+  restrictedToApp?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -164,6 +170,10 @@ export interface CreateModelPayload {
   supportsChat?: boolean;
   supportsEmbedding?: boolean;
   supportsImageGeneration?: boolean;
+  /** 'public' = all users | 'platform-private' = restricted to one internal app */
+  visibility?: 'public' | 'platform-private';
+  /** Only used when visibility = 'platform-private'. Single app slug e.g. 'auraflow' */
+  restrictedToApp?: string;
 }
 
 export interface ApiKey {
@@ -307,7 +317,7 @@ export const neuralApi = {
       const query = params.toString();
       return fetcher<Agent[]>(`/agents${query ? `?${query}` : ''}`);
     },
-    stats: () => fetcher<AgentStats>('/agents/stats'),
+    stats: (type?: string) => fetcher<AgentStats>(`/agents/stats${type ? `?type=${type}` : ''}`),
     get: (id: string) => fetcher<Agent>(`/agents/${id}`),
     create: (payload: CreateAgentPayload) =>
       fetcher<Agent>('/agents', { method: 'POST', body: JSON.stringify(payload) }),

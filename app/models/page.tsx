@@ -92,9 +92,10 @@ export default function ModelsPage() {
     baseUrl: "",
     pointsPerRequest: 0,
     monthlyTokenLimitPerUser: 0,
+    contextWindow: 128000,
     tier: "free" as any,
     visibility: "public" as "public" | "platform-private",
-    restrictedToApps: [] as string[],
+    restrictedToApp: "" as string,
     supportsImageGeneration: false,
     supportsChat: true,
     supportsEmbedding: false,
@@ -105,8 +106,13 @@ export default function ModelsPage() {
   const [isSaving, setIsSaving] = useState(false);
 
   const handleFetchModels = async () => {
-    if (!newModel.apiKey) {
+    const isOllama = newModel.provider === 'ollama';
+    if (!isOllama && !newModel.apiKey) {
       toast.error("Please provide an API Key first to fetch models");
+      return;
+    }
+    if (isOllama && !newModel.baseUrl) {
+      toast.error("Please enter the Ollama URL (e.g. http://localhost:11434) first");
       return;
     }
     setFetchingModels(true);
@@ -114,10 +120,10 @@ export default function ModelsPage() {
       const result = await neuralApi.models.fetchProviderModels(newModel.provider, newModel.apiKey, newModel.baseUrl);
       setFetchedModels(result);
       if (result.length > 0) {
-        toast.success(`Fetched ${result.length} models`);
+        toast.success(`Fetched ${result.length} models from Ollama`);
       } else {
         if (newModel.provider === 'custom' || newModel.provider === 'ollama') {
-          toast.info("Discovery endpoint not found or empty. Please enter model ID manually.");
+          toast.info("No models found. Make sure Ollama is running and you have models pulled (e.g. ollama pull llama3).");
         } else {
           toast.error("No models found for the selected capabilities.");
         }
@@ -152,8 +158,26 @@ export default function ModelsPage() {
     setIsSaving(true);
     try {
       if (type === 'platform') {
-        await neuralApi.models.createPlatform(newModel);
-        toast.success("Platform model created.");
+        const payload: any = {
+          name: newModel.name,
+          provider: newModel.provider,
+          modelId: newModel.modelId,
+          tier: newModel.tier,
+          visibility: newModel.visibility,
+          supportsChat: newModel.supportsChat,
+          supportsImageGeneration: newModel.supportsImageGeneration,
+          supportsEmbedding: newModel.supportsEmbedding,
+          pointsPerRequest: newModel.pointsPerRequest,
+          monthlyTokenLimitPerUser: newModel.monthlyTokenLimitPerUser,
+          contextWindow: newModel.contextWindow || 128000,
+          baseUrl: newModel.baseUrl || undefined,
+        };
+        if (newModel.apiKey) payload.apiKey = newModel.apiKey;
+        if (newModel.visibility === 'platform-private' && newModel.restrictedToApp) {
+          payload.restrictedToApp = newModel.restrictedToApp;
+        }
+        await neuralApi.models.createPlatform(payload);
+        toast.success("Platform model created successfully.");
         setIsAdminAdding(false);
       } else {
         await neuralApi.models.createByok(newModel);
@@ -170,9 +194,10 @@ export default function ModelsPage() {
         baseUrl: "",
         pointsPerRequest: 0,
         monthlyTokenLimitPerUser: 0,
+        contextWindow: 128000,
         tier: "free",
         visibility: "public",
-        restrictedToApps: [],
+        restrictedToApp: "",
         supportsImageGeneration: false,
         supportsChat: true,
         supportsEmbedding: false,
@@ -197,9 +222,8 @@ export default function ModelsPage() {
   const toggleApp = (app: string) =>
     setNewModel(m => ({
       ...m,
-      restrictedToApps: m.restrictedToApps.includes(app)
-        ? m.restrictedToApps.filter(a => a !== app)
-        : [...m.restrictedToApps, app],
+      // Only one app allowed (DB is a single text column) — toggle selection
+      restrictedToApp: m.restrictedToApp === app ? "" : app,
     }));
 
   const handleDeleteModel = async (id: number) => {
@@ -245,7 +269,7 @@ export default function ModelsPage() {
                 <DialogHeader>
                   <DialogTitle>Add Platform-Managed Model</DialogTitle>
                   <DialogDescription>
-                    Configure a globally available model. An initial working API key is required to verify capabilities.
+                    Configure a globally available model. API key is optional — add keys later via the key pool panel.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto px-1">
@@ -275,7 +299,7 @@ export default function ModelsPage() {
                   </div>
 
                   <div className="grid gap-2">
-                    <Label>Seed API Key (Required for verification)</Label>
+                    <Label>Seed API Key <span className="text-muted-foreground font-normal">(Optional — add to key pool)</span></Label>
                     <div className="flex gap-2">
                       <Input 
                         type="password" 
@@ -284,12 +308,14 @@ export default function ModelsPage() {
                         onChange={e => setNewModel({...newModel, apiKey: e.target.value})} 
                         className="flex-1"
                       />
-                      <Button variant="outline" size="sm" onClick={handleFetchModels} disabled={fetchingModels || !newModel.apiKey}>
-                        {fetchingModels ? <Loader2 size={14} className="animate-spin mr-2" /> : <Zap size={14} className="mr-2" />}
-                        Fetch
-                      </Button>
+                      {newModel.provider !== 'ollama' && (
+                        <Button variant="outline" size="sm" onClick={handleFetchModels} disabled={fetchingModels || !newModel.apiKey}>
+                          {fetchingModels ? <Loader2 size={14} className="animate-spin mr-2" /> : <Zap size={14} className="mr-2" />}
+                          Fetch
+                        </Button>
+                      )}
                     </div>
-                    <p className="text-[10px] text-muted-foreground">This key will be the first entry in the platform's key pool.</p>
+                    <p className="text-[10px] text-muted-foreground">Optional. If provided, this key will be the first entry in the platform's key pool.</p>
                   </div>
 
                   {(newModel.provider === 'custom' || newModel.provider === 'ollama') && (
@@ -298,19 +324,33 @@ export default function ModelsPage() {
                         <Label htmlFor="baseUrl" className="text-[10px] uppercase tracking-wider font-bold text-primary/70">
                           {newModel.provider === 'ollama' ? 'Ollama URL' : 'Manual Endpoint URL'}
                         </Label>
-                        <Input
-                          id="baseUrl"
-                          placeholder={newModel.provider === 'ollama' ? "http://localhost:11434" : "https://api.your-provider.com/v1"}
-                          value={newModel.baseUrl}
-                          onChange={(e) => setNewModel({ ...newModel, baseUrl: e.target.value })}
-                          className="bg-background border-border h-8 text-xs"
-                        />
+                        <div className="flex gap-2">
+                          <Input
+                            id="baseUrl"
+                            placeholder={newModel.provider === 'ollama' ? "http://localhost:11434" : "https://api.your-provider.com/v1"}
+                            value={newModel.baseUrl}
+                            onChange={(e) => setNewModel({ ...newModel, baseUrl: e.target.value })}
+                            className="bg-background border-border h-8 text-xs flex-1"
+                          />
+                          {newModel.provider === 'ollama' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 shrink-0 text-purple-400 border-purple-400/30 hover:bg-purple-400/10"
+                              onClick={handleFetchModels}
+                              disabled={fetchingModels || !newModel.baseUrl}
+                            >
+                              {fetchingModels ? <Loader2 size={13} className="animate-spin" /> : <Zap size={13} />}
+                              <span className="ml-1.5 text-[11px]">Fetch Models</span>
+                            </Button>
+                          )}
+                        </div>
                       </div>
                       
                       <p className="text-[9px] text-muted-foreground italic">
                         {newModel.provider === 'custom' 
                           ? "Tip: Use {modelId} in the URL if the endpoint requires the model name dynamically (e.g. /models/{modelId}/v1)." 
-                          : "Required for local Ollama instances."}
+                          : "Click Fetch Models to list all installed Ollama models, or type a model ID manually."}
                       </p>
                     </div>
                   )}
@@ -398,7 +438,7 @@ export default function ModelsPage() {
                     <div className="flex gap-2">
                       {(["public", "platform-private"] as const).map(v => (
                         <button key={v} type="button"
-                          onClick={() => setNewModel({ ...newModel, visibility: v, restrictedToApps: v === 'public' ? [] : newModel.restrictedToApps })}
+                          onClick={() => setNewModel({ ...newModel, visibility: v, restrictedToApp: v === 'public' ? '' : newModel.restrictedToApp })}
                           className={`flex-1 px-3 py-2 rounded-xl text-xs border transition-all font-medium ${
                             newModel.visibility === v
                               ? 'bg-primary/15 border-primary/40 text-primary'
@@ -412,7 +452,7 @@ export default function ModelsPage() {
                       <div className="space-y-1.5">
                         <div className="flex flex-wrap gap-2">
                           {PLATFORM_APPS.map(app => {
-                            const active = newModel.restrictedToApps.includes(app.value);
+                            const active = newModel.restrictedToApp === app.value;
                             return (
                               <button key={app.value} type="button" onClick={() => toggleApp(app.value)}
                                 className={`px-3 py-1.5 rounded-lg text-xs border transition-all font-medium ${
@@ -423,9 +463,9 @@ export default function ModelsPage() {
                             );
                           })}
                         </div>
-                        {newModel.restrictedToApps.length > 0 && (
+                        {newModel.restrictedToApp && (
                           <p className="text-[10px] text-amber-400">
-                            Only platform keys for: {newModel.restrictedToApps.join(', ')}
+                            Only platform keys for: {newModel.restrictedToApp}
                           </p>
                         )}
                       </div>
@@ -436,11 +476,14 @@ export default function ModelsPage() {
                   <Button 
                     variant="neural" 
                     className="w-full" 
-                    disabled={!newModel.apiKey || !newModel.name || !newModel.modelId || isSaving}
+                    disabled={
+                      !newModel.name || !newModel.modelId || isSaving ||
+                      (newModel.provider === 'ollama' && !newModel.baseUrl)
+                    }
                     onClick={() => handleAddModel('platform')}
                   >
                     {isSaving ? <Loader2 size={14} className="animate-spin mr-2" /> : <ShieldCheck size={14} className="mr-2" />}
-                    Verify & Create Platform Model
+                    Verify &amp; Create Platform Model
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -740,11 +783,14 @@ function ModelCard({
               <div className="flex items-center gap-2">
                 <CardTitle className="text-sm font-bold">{model.name}</CardTitle>
                 {model.tier === 'premium' && <ShieldCheck size={12} className="text-amber-500" />}
-                {(model as any).visibility === 'platform-private' && (
+                {model.visibility === 'platform-private' && (
                   <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-1">
-                    🔒 {Array.isArray((model as any).restrictedToApps) && (model as any).restrictedToApps.length > 0
-                      ? (model as any).restrictedToApps.join(', ')
-                      : (model as any).restrictedToApp || 'private'}
+                    🔒 {model.restrictedToApp || 'Internal Only'}
+                  </span>
+                )}
+                {isPlatform && model.visibility === 'public' && (
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                    🌐 Public
                   </span>
                 )}
               </div>

@@ -14,11 +14,14 @@ import { neuralApi, AnalyticsOverview, AppBreakdown, RecentRequest } from "@/lib
 import { useNeuralFetch, useNeuralEvents } from "@/lib/hooks";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCSWSubscriptions, useCSWCredits } from "@codeswayam/auth";
+import { TraceInspectorDrawer } from "@/components/trace-inspector-drawer";
 
 export default function DashboardPage() {
   const { events: liveEvents, connected } = useNeuralEvents();
   const { subscriptions } = useCSWSubscriptions();
   const { balance } = useCSWCredits();
+  const [selectedLog, setSelectedLog] = useState<any | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const neuralSub = subscriptions.find(
     (s) => s.status === "active" && (s.productSaasId?.includes("neural") || s.planType === "BUNDLE")
@@ -142,6 +145,7 @@ export default function DashboardPage() {
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0 }}
+                    onClick={() => { setSelectedLog(r); setDrawerOpen(true); }}
                     className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/20 border border-border hover:border-primary/20 hover:bg-muted/30 transition-all cursor-pointer group"
                   >
                     <div className="w-7 h-7 rounded-lg bg-secondary flex items-center justify-center shrink-0 border border-border/50 group-hover:border-primary/30">
@@ -232,6 +236,7 @@ export default function DashboardPage() {
           </Link>
         ))}
       </div>
+      <TraceInspectorDrawer log={selectedLog} open={drawerOpen} onClose={() => setDrawerOpen(false)} />
     </div>
   );
 }

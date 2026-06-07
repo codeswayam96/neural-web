@@ -16,10 +16,13 @@ import {
   BarChart3,
   Settings,
   Zap,
+  User,
+  LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useCSWUser, logout } from "@codeswayam/auth";
 
 const navLinks = [
   { label: "Features", href: "#features" },
@@ -42,12 +45,23 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [productOpen, setProductOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const { user, isSignedIn } = useCSWUser();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  const handleSignOut = async () => {
+    await logout();
+    window.location.href = "/";
+  };
+
+  const userInitials = user?.name
+    ? user.name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)
+    : "U";
 
   return (
     <header
@@ -136,20 +150,74 @@ export default function Navbar() {
           ))}
         </div>
 
-        {/* Desktop CTA */}
+        {/* Desktop CTA — Auth-aware */}
         <div className="hidden md:flex items-center gap-3">
-          <Link
-            href={`${process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3003"}/login?redirect=${encodeURIComponent((process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3008") + "/dashboard")}`}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Sign in
-          </Link>
-          <Button variant="neural" size="sm" asChild>
-            <Link href="/dashboard">
-              <Zap size={13} />
-              Open Dashboard
-            </Link>
-          </Button>
+          {isSignedIn ? (
+            <>
+              <Button variant="neural" size="sm" asChild>
+                <Link href="/dashboard">
+                  <Zap size={13} />
+                  Dashboard
+                </Link>
+              </Button>
+              {/* User avatar with dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setUserMenuOpen((p) => !p)}
+                  className="w-8 h-8 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-xs font-bold text-primary hover:bg-primary/30 transition-colors"
+                  title={user?.name || "Account"}
+                >
+                  {userInitials}
+                </button>
+                {userMenuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
+                    <div className="absolute top-full mt-2 right-0 w-56 glass-strong rounded-xl p-2 shadow-xl shadow-black/40 border border-border z-50">
+                      <div className="px-3 py-2.5 border-b border-border mb-1">
+                        <p className="text-sm font-medium truncate">{user?.name || "User"}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{user?.email || ""}</p>
+                      </div>
+                      <Link
+                        href="/dashboard"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                      >
+                        <LayoutDashboard size={14} /> Dashboard
+                      </Link>
+                      <Link
+                        href="/settings"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                      >
+                        <Settings size={14} /> Settings
+                      </Link>
+                      <button
+                        onClick={() => { setUserMenuOpen(false); handleSignOut(); }}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-red-400 hover:bg-red-500/10 transition-colors w-full text-left"
+                      >
+                        <LogOut size={14} /> Sign Out
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <Link
+                href={`${process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3003"}/login?redirect=${encodeURIComponent((process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3008") + "/dashboard")}`}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Sign in
+              </Link>
+              <Button variant="neural" size="sm" asChild>
+                <Link href={`${process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3003"}/login?redirect=${encodeURIComponent((process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3008") + "/dashboard")}`}>
+                  <Zap size={13} />
+                  Get Started
+                </Link>
+              </Button>
+            </>
+          )}
         </div>
 
         {/* Mobile menu button */}
@@ -179,19 +247,47 @@ export default function Navbar() {
               </Link>
             ))}
             <div className="border-t border-border my-2 pt-2 flex flex-col gap-2">
-              <Link
-                href={`${process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3003"}/login?redirect=${encodeURIComponent((process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3008") + "/dashboard")}`}
-                onClick={() => setOpen(false)}
-                className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground"
-              >
-                Sign in
-              </Link>
-              <Button variant="neural" size="sm" asChild className="w-full">
-                <Link href="/dashboard" onClick={() => setOpen(false)}>
-                  <Zap size={13} />
-                  Open Dashboard
-                </Link>
-              </Button>
+              {isSignedIn ? (
+                <>
+                  <div className="flex items-center gap-2.5 px-3 py-2">
+                    <div className="w-7 h-7 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-[10px] font-bold text-primary">
+                      {userInitials}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium truncate">{user?.name || "User"}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">{user?.email || ""}</p>
+                    </div>
+                  </div>
+                  <Button variant="neural" size="sm" asChild className="w-full">
+                    <Link href="/dashboard" onClick={() => setOpen(false)}>
+                      <Zap size={13} />
+                      Open Dashboard
+                    </Link>
+                  </Button>
+                  <button
+                    onClick={() => { setOpen(false); handleSignOut(); }}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                  >
+                    <LogOut size={14} /> Sign Out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href={`${process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3003"}/login?redirect=${encodeURIComponent((process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3008") + "/dashboard")}`}
+                    onClick={() => setOpen(false)}
+                    className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground"
+                  >
+                    Sign in
+                  </Link>
+                  <Button variant="neural" size="sm" asChild className="w-full">
+                    <Link href={`${process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3003"}/login?redirect=${encodeURIComponent((process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3008") + "/dashboard")}`} onClick={() => setOpen(false)}>
+                      <Zap size={13} />
+                      Get Started
+                    </Link>
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>

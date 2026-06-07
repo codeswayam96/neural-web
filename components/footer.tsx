@@ -19,7 +19,7 @@ const footerLinks = {
     { label: "Changelog", href: "#changelog" },
   ],
   Platform: [
-    { label: "codeswayam-auth", href: "http://localhost:3003", external: true },
+    { label: "codeswayam-auth", href: process.env.NEXT_PUBLIC_AUTH_URL || "https://auth.codeswayam.com", external: true },
     { label: "AuraFlow", href: "#", external: true },
     { label: "EMS", href: "#", external: true },
     { label: "Status", href: "#status" },

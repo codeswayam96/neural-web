@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Brain, Zap, Shield, Key, Globe, Bot, Database,
@@ -13,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
-import { checkUserAuth } from "@/lib/auth";
+import { useCSWUser } from "@codeswayam/auth";
 
 // ── Data ────────────────────────────────────────────────────────────
 
@@ -122,12 +121,8 @@ const plans = [
 // ── Page ─────────────────────────────────────────────────────────────
 
 export default function HomePage() {
-  const [authed, setAuthed] = useState(false);
-
-  useEffect(() => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-    checkUserAuth(apiUrl).then(({ authenticated }) => setAuthed(authenticated));
-  }, []);
+  const { isSignedIn } = useCSWUser();
+  const authed = !!isSignedIn;
 
   return (
     <div className="flex flex-col min-h-screen bg-background">

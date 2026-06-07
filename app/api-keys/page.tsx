@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 
 const PERMISSIONS = ["chat", "agents", "analytics", "admin", "images"];
+const PLATFORM_APPS = ["auraflow", "admin-panel", "codeswayam-web", "ems-frontend", "neural-web", "codeswayam-auth"];
 
 // ── Code Block ─────────────────────────────────────────────────────────
 function CodeBlock({ code, language = "bash" }: { code: string; language?: string }) {
@@ -85,21 +86,29 @@ function CreateKeyDialog({ open, onClose, onSuccess, isAdmin }: {
             </div>
             <div>
               <label className="text-xs text-muted-foreground mb-1.5 block">App Name *</label>
-              <input value={form.appName} onChange={(e) => setForm({ ...form, appName: e.target.value })} placeholder="auraflow" required
-                className="w-full px-3 py-2.5 text-sm bg-secondary border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 font-mono" />
+              {form.scope === 'platform' ? (
+                <select value={form.appName} onChange={(e) => setForm({ ...form, appName: e.target.value })} required
+                  className="w-full px-3 py-2.5 text-sm bg-secondary border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 font-mono">
+                  <option value="">Select platform…</option>
+                  {PLATFORM_APPS.map(app => <option key={app} value={app}>{app}</option>)}
+                </select>
+              ) : (
+                <input value={form.appName} onChange={(e) => setForm({ ...form, appName: e.target.value })} placeholder="my-app" required
+                  className="w-full px-3 py-2.5 text-sm bg-secondary border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 font-mono" />
+              )}
             </div>
           </div>
           {isAdmin && (
             <div>
               <label className="text-xs text-muted-foreground mb-1.5 block">Key Scope</label>
               <div className="flex gap-2">
-                <button type="button" onClick={() => setForm({ ...form, scope: 'user', rateLimit: 1000 })}
+                <button type="button" onClick={() => setForm({ ...form, scope: 'user', rateLimit: 1000, appName: '' })}
                   className={`flex-1 px-3 py-2 rounded-xl text-xs border transition-all font-medium ${
                     form.scope === 'user' ? 'bg-primary/15 border-primary/40 text-primary' : 'border-border text-muted-foreground hover:border-primary/30'
                   }`}>
                   👤 User Project
                 </button>
-                <button type="button" onClick={() => setForm({ ...form, scope: 'platform', rateLimit: 0 })}
+                <button type="button" onClick={() => setForm({ ...form, scope: 'platform', rateLimit: 0, appName: '' })}
                   className={`flex-1 px-3 py-2 rounded-xl text-xs border transition-all font-medium ${
                     form.scope === 'platform' ? 'bg-primary/15 border-primary/40 text-primary' : 'border-border text-muted-foreground hover:border-primary/30'
                   }`}>
