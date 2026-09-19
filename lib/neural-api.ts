@@ -3,7 +3,7 @@
  * Connects neural-web frontend to the neural-api NestJS backend.
  */
 
-const DIRECT_BASE = process.env.NEXT_PUBLIC_NEURAL_API_URL || 'http://localhost:3006';
+const DIRECT_BASE = process.env.NEXT_PUBLIC_NEURAL_API_URL || 'http://localhost:3000';
 const BASE = typeof window === 'undefined' ? DIRECT_BASE : '/api/neural';
 
 async function fetcher<T>(path: string, options?: RequestInit): Promise<T> {
