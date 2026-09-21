@@ -35,7 +35,7 @@ export default function AdminWorkflowsPage() {
   };
 
   return (
-    <div className="space-y-5 max-w-6xl">
+    <div className="space-y-5 w-full">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold">All Workflows</h2>

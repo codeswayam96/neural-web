@@ -314,7 +314,7 @@ export default function WorkflowsPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl">
+    <div className="space-y-6 w-full">
       {/* Header */}
       <div className="flex items-start sm:items-center justify-between gap-3">
         <div>

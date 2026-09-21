@@ -389,7 +389,7 @@ export default function ApiKeysPage() {
   const handleCreated = (created: CreatedApiKey) => { setRevealKey(created); refetch(); refetchStats(); };
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6 w-full">
       <CreateKeyDialog open={createOpen} onClose={() => setCreateOpen(false)} onSuccess={handleCreated} isAdmin={isAdmin} />
       {revealKey && <KeyRevealDialog apiKey={revealKey} onClose={() => setRevealKey(null)} />}
       {ConfirmDialogNode}

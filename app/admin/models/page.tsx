@@ -175,7 +175,7 @@ export default function AdminModelsPage() {
   };
 
   return (
-    <div className="space-y-5 max-w-6xl">
+    <div className="space-y-5 w-full">
       {addOpen && <AddModelModal onClose={() => setAddOpen(false)} onSuccess={load} />}
       <div className="flex items-center justify-between">
         <div>

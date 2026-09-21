@@ -111,28 +111,32 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Main */}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        <header className="h-14 shrink-0 border-b border-border flex items-center justify-between px-4 md:px-6 bg-background/95">
-          <div className="flex items-center gap-3">
-            <button
-              className="md:hidden w-8 h-8 rounded-lg border border-border flex items-center justify-center hover:bg-secondary transition-colors"
-              onClick={() => setSidebarOpen(true)}
-            >
-              <Menu size={16} className="text-muted-foreground" />
-            </button>
-            <div>
-              <h1 className="text-sm font-semibold capitalize">
-                {adminNav.find(n => n.exact ? pathname === n.href : pathname.startsWith(n.href))?.label || "Admin"}
-              </h1>
-              <p className="text-[10px] text-muted-foreground hidden sm:block">NeuralHub Platform Administration</p>
+        <header className="h-14 shrink-0 border-b border-border flex items-center px-4 md:px-8 bg-background/95">
+          <div className="w-full max-w-[1440px] mx-auto flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <button
+                className="md:hidden w-8 h-8 rounded-lg border border-border flex items-center justify-center hover:bg-secondary transition-colors"
+                onClick={() => setSidebarOpen(true)}
+              >
+                <Menu size={16} className="text-muted-foreground" />
+              </button>
+              <div>
+                <h1 className="text-sm font-semibold capitalize">
+                  {adminNav.find(n => n.exact ? pathname === n.href : pathname.startsWith(n.href))?.label || "Admin"}
+                </h1>
+                <p className="text-[10px] text-muted-foreground hidden sm:block">NeuralHub Platform Administration</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-red-400 bg-red-500/10 border border-red-500/20 px-2 sm:px-3 py-1.5 rounded-lg">
+              <ShieldCheck size={12} />
+              <span className="hidden sm:inline">{(user as any)?.role?.toUpperCase()} ACCESS</span>
             </div>
           </div>
-          <div className="flex items-center gap-2 text-xs text-red-400 bg-red-500/10 border border-red-500/20 px-2 sm:px-3 py-1.5 rounded-lg">
-            <ShieldCheck size={12} />
-            <span className="hidden sm:inline">{(user as any)?.role?.toUpperCase()} ACCESS</span>
-          </div>
         </header>
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">
-          {children}
+        <main className="flex-1 overflow-y-auto p-4 md:p-8">
+          <div className="w-full max-w-[1440px] mx-auto">
+            {children}
+          </div>
         </main>
       </div>
     </div>

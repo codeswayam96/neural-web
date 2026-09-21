@@ -53,7 +53,7 @@ export default function DashboardPage() {
   const maxRequests = apps ? Math.max(...apps.map((a) => a.requests), 1) : 1;
 
   return (
-    <div className="space-y-6 max-w-7xl">
+    <div className="space-y-6 w-full">
       {/* Header */}
       <div className="flex items-start sm:items-center justify-between gap-3">
         <div>

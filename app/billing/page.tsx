@@ -80,7 +80,7 @@ export default function BillingPage() {
   ];
 
   return (
-    <div className="space-y-8 max-w-6xl">
+    <div className="space-y-8 w-full">
       <BuyCreditsModal 
         open={isBuyModalOpen} 
         onClose={() => setIsBuyModalOpen(false)} 

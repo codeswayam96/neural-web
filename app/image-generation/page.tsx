@@ -444,14 +444,14 @@ export default function ImageGenerationPage() {
 
   if (selectedAgent) {
     return (
-      <div className="max-w-6xl mx-auto py-4">
+      <div className="w-full py-4">
         <ImagePlayground agent={selectedAgent} onBack={() => setSelectedAgent(null)} />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
+    <div className="space-y-6 w-full">
       <ImageAgentFormDialog
         open={dialogOpen || editAgent !== null}
         onClose={() => { setDialogOpen(false); setEditAgent(null); }}

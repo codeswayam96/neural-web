@@ -446,7 +446,7 @@ export default function AgentsPage() {
   const handleSuccess = () => { refetch(); refetchStats(); setEditAgent(null); };
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6 w-full">
       <AgentFormDialog open={dialogOpen || editAgent !== null}
         onClose={() => { setDialogOpen(false); setEditAgent(null); }}
         onSuccess={handleSuccess} editAgent={editAgent} />

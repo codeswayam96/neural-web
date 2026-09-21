@@ -49,7 +49,7 @@ export default function AnalyticsPage() {
   const maxBar = timeline ? Math.max(...timeline.map((t) => t.requests), 1) : 1;
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6 w-full">
       <div className="flex items-start sm:items-center justify-between gap-3 flex-wrap">
         <div>
           <h2 className="text-xl font-bold">Analytics</h2>
@@ -125,11 +125,11 @@ export default function AnalyticsPage() {
         </CardHeader>
         <CardContent>
           {tlLoading || !isMounted ? (
-            <div className="h-48 bg-secondary/20 border border-border/50 rounded-xl flex items-center justify-center animate-pulse text-xs text-muted-foreground">
+            <div className="h-64 bg-secondary/20 border border-border/50 rounded-xl flex items-center justify-center animate-pulse text-xs text-muted-foreground">
               Initializing Recharts interactive session...
             </div>
           ) : (
-            <div className="h-48 w-full mt-2 font-mono text-[10px]">
+            <div className="h-64 w-full mt-2 font-mono text-[10px]">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={timeline ?? []} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
                   <defs>
@@ -187,9 +187,9 @@ export default function AnalyticsPage() {
                 </div>
                 <div className="space-y-2 max-h-[160px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
                   {(modelUsage ?? []).map((m) => (
-                    <div key={m.model} className="flex items-center justify-between text-xs">
-                      <span className="font-mono truncate max-w-[200px]">{m.model}</span>
-                      <span className="text-muted-foreground font-bold">{m.pct}%</span>
+                    <div key={m.model} className="flex items-center justify-between text-xs gap-3">
+                      <span className="font-mono truncate flex-1 min-w-0">{m.model}</span>
+                      <span className="text-muted-foreground font-bold shrink-0">{m.pct}%</span>
                     </div>
                   ))}
                 </div>

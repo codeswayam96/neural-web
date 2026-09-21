@@ -292,7 +292,7 @@ export default function KnowledgeBasePage() {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl">
+    <div className="space-y-6 w-full">
       <CreateKBDialog 
         open={createOpen} 
         onClose={() => setCreateOpen(false)} 

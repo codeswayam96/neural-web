@@ -176,7 +176,7 @@ export default function WorkflowDetailPage() {
   if (!workflow) return <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4"><AlertCircle size={32} className="text-destructive" /><p className="text-muted-foreground">Workflow not found</p><Link href="/workflows"><Button variant="neural">Back to Workflows</Button></Link></div>;
 
   return (
-    <div className="h-[calc(100vh-6rem)] flex flex-col -m-6 overflow-hidden bg-background">
+    <div className="h-full flex flex-col overflow-hidden bg-background">
       {showNodePicker && (
         <NodePickerModal
           disabledTypes={localNodes.some(n => n.type === 'trigger') ? ['trigger'] : []}

@@ -137,6 +137,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const pageLabel = pathname.split("/").filter(Boolean).pop()?.replace(/-/g, " ") || "Dashboard";
+  const isFullBleed = pathname.startsWith("/workflows/") && pathname !== "/workflows";
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -173,38 +174,52 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
       {/* ── Main content ── */}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         {/* Top bar */}
-        <header className="h-14 shrink-0 border-b border-border glass-strong flex items-center justify-between px-4 md:px-6 gap-3">
-          {/* Mobile hamburger */}
-          <div className="flex items-center gap-3 min-w-0">
-            <button
-              className="md:hidden w-8 h-8 rounded-lg border border-border flex items-center justify-center hover:bg-secondary transition-colors shrink-0"
-              onClick={() => setSidebarOpen(true)}
-            >
-              <Menu size={16} className="text-muted-foreground" />
-            </button>
-            <div className="min-w-0">
-              <h1 className="text-sm font-semibold text-foreground capitalize truncate">{pageLabel}</h1>
-              <p className="text-[10px] text-muted-foreground hidden sm:block">neural.codeswayam.com</p>
+        <header className="h-14 shrink-0 border-b border-border glass-strong flex items-center px-4 md:px-8">
+          <div className={cn(
+            "w-full flex items-center justify-between gap-3",
+            !isFullBleed && "max-w-[1440px] mx-auto"
+          )}>
+            {/* Mobile hamburger */}
+            <div className="flex items-center gap-3 min-w-0">
+              <button
+                className="md:hidden w-8 h-8 rounded-lg border border-border flex items-center justify-center hover:bg-secondary transition-colors shrink-0"
+                onClick={() => setSidebarOpen(true)}
+              >
+                <Menu size={16} className="text-muted-foreground" />
+              </button>
+              <div className="min-w-0">
+                <h1 className="text-sm font-semibold text-foreground capitalize truncate">{pageLabel}</h1>
+                <p className="text-[10px] text-muted-foreground hidden sm:block">neural.codeswayam.com</p>
+              </div>
             </div>
-          </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="hidden sm:flex items-center gap-1.5 text-xs text-emerald-400">
-              <span className="status-dot active" />
-              <span className="hidden lg:inline">All systems operational</span>
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="hidden sm:flex items-center gap-1.5 text-xs text-emerald-400">
+                <span className="status-dot active" />
+                <span className="hidden lg:inline">All systems operational</span>
+              </div>
+              <ThemeToggle />
+              <button className="w-8 h-8 rounded-lg border border-border flex items-center justify-center hover:bg-secondary transition-colors">
+                <Bell size={14} className="text-muted-foreground" />
+              </button>
+              <button className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-xs text-primary hover:bg-primary/20 transition-colors">
+                <Zap size={11} /> Upgrade
+              </button>
             </div>
-            <ThemeToggle />
-            <button className="w-8 h-8 rounded-lg border border-border flex items-center justify-center hover:bg-secondary transition-colors">
-              <Bell size={14} className="text-muted-foreground" />
-            </button>
-            <button className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-xs text-primary hover:bg-primary/20 transition-colors">
-              <Zap size={11} /> Upgrade
-            </button>
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-grid-sm">
-          <ErrorBoundary>{children}</ErrorBoundary>
+        <main className={cn(
+          "flex-1 overflow-y-auto bg-grid-sm",
+          isFullBleed ? "p-0" : "p-4 md:p-8"
+        )}>
+          {isFullBleed ? (
+            <ErrorBoundary>{children}</ErrorBoundary>
+          ) : (
+            <div className="w-full max-w-[1440px] mx-auto">
+              <ErrorBoundary>{children}</ErrorBoundary>
+            </div>
+          )}
         </main>
       </div>
     </div>

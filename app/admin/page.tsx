@@ -47,7 +47,7 @@ export default function AdminOverviewPage() {
   ];
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6 w-full">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold">Platform Overview</h2>
