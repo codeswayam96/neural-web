@@ -18,6 +18,7 @@ import {
   Zap,
   User,
   LogOut,
+  ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +48,7 @@ export default function Navbar() {
   const [productOpen, setProductOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { user, isSignedIn } = useCSWUser();
+  const isAdmin = (user as any)?.role === "admin" || (user as any)?.role === "superadmin";
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -191,6 +193,15 @@ export default function Navbar() {
                       >
                         <Settings size={14} /> Settings
                       </Link>
+                      {isAdmin && (
+                        <Link
+                          href="/admin"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 transition-colors"
+                        >
+                          <ShieldCheck size={14} /> Admin Panel
+                        </Link>
+                      )}
                       <button
                         onClick={() => { setUserMenuOpen(false); handleSignOut(); }}
                         className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-red-400 hover:bg-red-500/10 transition-colors w-full text-left"
@@ -264,6 +275,15 @@ export default function Navbar() {
                       Open Dashboard
                     </Link>
                   </Button>
+                  {isAdmin && (
+                    <Link
+                      href="/admin"
+                      onClick={() => setOpen(false)}
+                      className="flex items-center gap-2 px-3 py-2 text-sm text-amber-400 hover:bg-amber-500/10 rounded-lg transition-colors"
+                    >
+                      <ShieldCheck size={14} /> Admin Panel
+                    </Link>
+                  )}
                   <button
                     onClick={() => { setOpen(false); handleSignOut(); }}
                     className="flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"

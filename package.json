@@ -12,7 +12,7 @@
     "@codeswayam/analytics": "^0.1.3",
     "@codeswayam/api-client": "^1.3.2",
     "@codeswayam/auth": "^2.6.0",
-    "@codeswayam/neural": "^1.0.4",
+    "@codeswayam/neural": "^1.1.1",
     "@codeswayam/ui": "^1.3.0",
     "@radix-ui/react-avatar": "^1.1.10",
     "@radix-ui/react-dialog": "^1.1.15",
