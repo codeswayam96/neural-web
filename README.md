@@ -142,6 +142,17 @@ The Agents page (`/agents`) provides a full agent management interface:
 - Choose backing model per agent
 - **Test agents inline** with a built-in chat interface
 - Attach agents to knowledge bases for RAG-augmented responses
+- **Dual-Persona Segmentation**:
+  - **Custom User Agents (`managedByApp: null`)**: Standalone agents created for personal websites, e-commerce, or client businesses. Full CRUD, playground testing, and 1-line embed snippet generation.
+  - **Platform-Managed Agents (`managedByApp: 'auraflow'`)**: Automatically provisioned by CodeSwayam apps with entity binding (`entityId: automation.id`). Protected with a safety lock in `neural-web` to prevent accidental deletion that could break live automations.
+- **1-Line Website Integration**:
+  - Embed any agent on WordPress, Shopify, Webflow, or static HTML in 1 line:
+    ```html
+    <script src="https://core.codeswayam.com/v1/widget.js" data-agent="agent_id" defer></script>
+    ```
+  - Drop into React/Next.js via `@codeswayam/neural/react` (`<NeuralChatWidget agentId="..." />`).
+- **Deterministic Billing & Fallback**:
+  - Automatically respects user subscriptions (`aiIncluded: true`), falls back to atomic wallet deduction, and dispatches multi-channel alerts with graceful static replies upon credit exhaustion.
 
 ### 4. Visual Workflow Builder
 
