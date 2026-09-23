@@ -193,6 +193,13 @@ export default function Navbar() {
                       >
                         <Settings size={14} /> Settings
                       </Link>
+                      <a
+                        href={`${process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3003"}/profile?app=neural&redirect=${encodeURIComponent((process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3004") + "/dashboard")}`}
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                      >
+                        <User size={14} /> Profile & Account
+                      </a>
                       {isAdmin && (
                         <Link
                           href="/admin"
@@ -216,13 +223,13 @@ export default function Navbar() {
           ) : (
             <>
               <Link
-                href={`${process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3003"}/login?redirect=${encodeURIComponent((process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3008") + "/dashboard")}`}
+                href={`${process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3003"}/login?app=neural&redirect=${encodeURIComponent((process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3004") + "/dashboard")}`}
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 Sign in
               </Link>
               <Button variant="neural" size="sm" asChild>
-                <Link href={`${process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3003"}/login?redirect=${encodeURIComponent((process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3008") + "/dashboard")}`}>
+                <Link href={`${process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3003"}/login?app=neural&redirect=${encodeURIComponent((process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3004") + "/dashboard")}`}>
                   <Zap size={13} />
                   Get Started
                 </Link>
@@ -275,6 +282,13 @@ export default function Navbar() {
                       Open Dashboard
                     </Link>
                   </Button>
+                  <a
+                    href={`${process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3003"}/profile?app=neural&redirect=${encodeURIComponent((process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3004") + "/dashboard")}`}
+                    onClick={() => setOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-colors"
+                  >
+                    <User size={14} /> Profile & Account
+                  </a>
                   {isAdmin && (
                     <Link
                       href="/admin"
@@ -294,14 +308,14 @@ export default function Navbar() {
               ) : (
                 <>
                   <Link
-                    href={`${process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3003"}/login?redirect=${encodeURIComponent((process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3008") + "/dashboard")}`}
+                    href={`${process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3003"}/login?app=neural&redirect=${encodeURIComponent((process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3004") + "/dashboard")}`}
                     onClick={() => setOpen(false)}
                     className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground"
                   >
                     Sign in
                   </Link>
                   <Button variant="neural" size="sm" asChild className="w-full">
-                    <Link href={`${process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3003"}/login?redirect=${encodeURIComponent((process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3008") + "/dashboard")}`} onClick={() => setOpen(false)}>
+                    <Link href={`${process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3003"}/login?app=neural&redirect=${encodeURIComponent((process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3004") + "/dashboard")}`} onClick={() => setOpen(false)}>
                       <Zap size={13} />
                       Get Started
                     </Link>

@@ -710,7 +710,7 @@ export default function ModelsPage() {
                   isPlatform
                   isAdmin={isAdmin}
                   onManageKeys={() => setActiveModelForKeys(model)}
-                  onDelete={() => handleDeleteModel(model.id)}
+                  onDelete={isAdmin ? () => handleDeleteModel(model.id) : undefined}
                 />
               ))
             )}
@@ -868,7 +868,7 @@ function ModelCard({
                 : mid.includes('3-small') || mid.includes('ada-002') ? 1536
                 : mid.includes('gemini-embedding-2') ? 3072
                 : 768;
-              const ok = dim === 3072; // gemini-embedding-001 is the confirmed working model
+              const ok = [768, 1536, 3072].includes(dim);
               return (
                 <span className={`flex items-center gap-1 font-mono ${ok ? 'text-blue-400/80' : 'text-amber-400/80'}`}>
                   {ok ? '✓' : '⚠'} {dim}-dim

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { neuralApi, CreateModelPayload } from "@/lib/neural-api";
-import { Cpu, RefreshCw, Loader2, CheckCircle, XCircle, Key, Settings, Plus, X } from "lucide-react";
+import { Cpu, RefreshCw, Loader2, CheckCircle, XCircle, Key, Settings, Plus, X, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -174,6 +174,17 @@ export default function AdminModelsPage() {
     catch (e: any) { toast.error(e.message); }
   };
 
+  const handleDeleteModel = async (id: number, name: string) => {
+    if (!confirm(`Are you sure you want to delete platform model "${name}"? This action cannot be undone.`)) return;
+    try {
+      await neuralApi.models.delete(id);
+      toast.success(`Platform model "${name}" deleted`);
+      load();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to delete model");
+    }
+  };
+
   return (
     <div className="space-y-5 w-full">
       {addOpen && <AddModelModal onClose={() => setAddOpen(false)} onSuccess={load} />}
@@ -235,6 +246,12 @@ export default function AdminModelsPage() {
                     className={`h-8 w-8 p-0 ${model.status === "active" ? "text-muted-foreground hover:text-amber-400" : "text-emerald-400 hover:text-emerald-300"}`}
                     onClick={() => handleToggle(model)}>
                     {model.status === "active" ? <XCircle size={13} /> : <CheckCircle size={13} />}
+                  </Button>
+                  <Button variant="ghost" size="sm"
+                    className="h-8 w-8 p-0 text-muted-foreground hover:text-red-400"
+                    title="Delete model"
+                    onClick={() => handleDeleteModel(model.id, model.name)}>
+                    <Trash2 size={13} />
                   </Button>
                 </div>
               </div>

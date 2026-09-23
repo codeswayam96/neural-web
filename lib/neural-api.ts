@@ -35,7 +35,23 @@ async function fetcher<T>(path: string, options?: RequestInit): Promise<T> {
 
   if (!res.ok) {
     const text = await res.text().catch(() => '');
-    throw new Error(`NeuralAPI ${res.status}: ${path} — ${text}`);
+    let cleanMessage = '';
+    let parsed: any = null;
+    try {
+      parsed = JSON.parse(text);
+      cleanMessage = parsed.message || parsed.error;
+    } catch {}
+
+    if (!cleanMessage) {
+      cleanMessage = text && text.length < 200 ? text : `Request failed with status ${res.status}`;
+    }
+
+    const err: any = new Error(cleanMessage);
+    err.status = res.status;
+    err.path = path;
+    err.raw = text;
+    err.data = parsed;
+    throw err;
   }
   return res.json() as Promise<T>;
 }

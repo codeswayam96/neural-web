@@ -70,7 +70,7 @@ export default function AdminDomainsPage() {
         <div className="flex gap-2">
           <input
             className={`${inp} flex-1`}
-            placeholder="e.g. auraflow.com or localhost:3008"
+            placeholder="e.g. auraflow.com or localhost:3004"
             value={newDomain}
             onChange={e => setNewDomain(e.target.value)}
             onKeyDown={e => e.key === "Enter" && handleAdd()}

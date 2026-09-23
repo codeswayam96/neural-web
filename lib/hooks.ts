@@ -25,19 +25,35 @@ export function useNeuralFetch<T>(
     setLoading(true);
     setError(null);
 
-    fetcher()
-      .then((res) => {
+    const runFetch = async (attempt = 1): Promise<void> => {
+      try {
+        const res = await fetcher();
         if (!cancelled) {
           setData(res);
           setLoading(false);
         }
-      })
-      .catch((err: Error) => {
+      } catch (err: any) {
+        const isOfflineOr503 =
+          err?.status === 503 ||
+          err?.message?.includes("503") ||
+          err?.message?.includes("offline") ||
+          err?.message?.includes("unreachable");
+
+        if (isOfflineOr503 && attempt <= 2 && !cancelled) {
+          setTimeout(() => {
+            if (!cancelled) runFetch(attempt + 1);
+          }, attempt * 1000);
+          return;
+        }
+
         if (!cancelled) {
-          setError(err.message || "Failed to fetch");
+          setError(err?.message || "Failed to fetch");
           setLoading(false);
         }
-      });
+      }
+    };
+
+    runFetch();
 
     return () => {
       cancelled = true;
