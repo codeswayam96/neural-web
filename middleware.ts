@@ -39,11 +39,14 @@ function decodeJwtRole(token: string): string | null {
 }
 
 export default withCSWAuth({
-    ssoUrl:       process.env.NEXT_PUBLIC_AUTH_URL,
+    appName: "Neural Platform",
+    appUrl: process.env.NEXT_PUBLIC_APP_URL,
+    ssoUrl: process.env.NEXT_PUBLIC_AUTH_URL,
     callbackPath: "/auth/callback",
     publicPaths: [
         "/",
     ],
+    protectedPaths: PROTECTED_PREFIXES,
     onRequest: (req, isAuthenticated) => {
         if (!isAuthenticated) return; // let withCSWAuth handle the redirect
 

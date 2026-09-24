@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useCSWUser, logout } from "@codeswayam/auth";
+import { getNeuralAuthUrls } from "@/lib/auth-url";
 
 const navLinks = [
   { label: "Features", href: "#features" },
@@ -49,6 +50,7 @@ export default function Navbar() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { user, isSignedIn } = useCSWUser();
   const isAdmin = (user as any)?.role === "admin" || (user as any)?.role === "superadmin";
+  const { loginUrl, profileUrl } = getNeuralAuthUrls();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -194,7 +196,7 @@ export default function Navbar() {
                         <Settings size={14} /> Settings
                       </Link>
                       <a
-                        href={`${process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3003"}/profile?app=neural&redirect=${encodeURIComponent((process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3004") + "/dashboard")}`}
+                        href={profileUrl}
                         onClick={() => setUserMenuOpen(false)}
                         className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
                       >
@@ -223,13 +225,13 @@ export default function Navbar() {
           ) : (
             <>
               <Link
-                href={`${process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3003"}/login?app=neural&redirect=${encodeURIComponent((process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3004") + "/dashboard")}`}
+                href={loginUrl}
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 Sign in
               </Link>
               <Button variant="neural" size="sm" asChild>
-                <Link href={`${process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3003"}/login?app=neural&redirect=${encodeURIComponent((process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3004") + "/dashboard")}`}>
+                <Link href={loginUrl}>
                   <Zap size={13} />
                   Get Started
                 </Link>
@@ -283,7 +285,7 @@ export default function Navbar() {
                     </Link>
                   </Button>
                   <a
-                    href={`${process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3003"}/profile?app=neural&redirect=${encodeURIComponent((process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3004") + "/dashboard")}`}
+                    href={profileUrl}
                     onClick={() => setOpen(false)}
                     className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-colors"
                   >
@@ -308,14 +310,14 @@ export default function Navbar() {
               ) : (
                 <>
                   <Link
-                    href={`${process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3003"}/login?app=neural&redirect=${encodeURIComponent((process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3004") + "/dashboard")}`}
+                    href={loginUrl}
                     onClick={() => setOpen(false)}
                     className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground"
                   >
                     Sign in
                   </Link>
                   <Button variant="neural" size="sm" asChild className="w-full">
-                    <Link href={`${process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3003"}/login?app=neural&redirect=${encodeURIComponent((process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3004") + "/dashboard")}`} onClick={() => setOpen(false)}>
+                    <Link href={loginUrl} onClick={() => setOpen(false)}>
                       <Zap size={13} />
                       Get Started
                     </Link>

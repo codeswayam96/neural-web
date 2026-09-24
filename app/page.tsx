@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import { useCSWUser } from "@codeswayam/auth";
+import { getNeuralAuthUrls } from "@/lib/auth-url";
 
 // ── Data ────────────────────────────────────────────────────────────
 
@@ -123,6 +124,7 @@ const plans = [
 export default function HomePage() {
   const { isSignedIn } = useCSWUser();
   const authed = !!isSignedIn;
+  const { loginUrl } = getNeuralAuthUrls();
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -158,7 +160,7 @@ export default function HomePage() {
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
               <Button variant="neural" size="lg" asChild>
-                <Link href={authed ? "/dashboard" : `${process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3003"}/login?app=neural&redirect=${encodeURIComponent((process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3004") + "/dashboard")}`}>
+                <Link href={authed ? "/dashboard" : loginUrl}>
                   <Zap size={16} />
                   Open Dashboard <ArrowRight size={14} />
                 </Link>
@@ -458,7 +460,7 @@ export default function HomePage() {
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <Button variant="neural" size="lg" asChild>
-                  <Link href={authed ? "/dashboard" : `${process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3003"}/login?app=neural&redirect=${encodeURIComponent((process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3004") + "/dashboard")}`}>
+                  <Link href={authed ? "/dashboard" : loginUrl}>
                     <Zap size={15} /> Open Dashboard <ArrowRight size={14} />
                   </Link>
                 </Button>
